@@ -581,7 +581,7 @@ export interface ChartData {
 // NOTIFICATIONS & SYSTEM
 // =======================
 
-export type NotificationType = 
+export type NotificationType =
   | 'info'
   | 'success'
   | 'warning'
@@ -594,11 +594,11 @@ export interface Notification {
   message: string;
   userId: string;
   isRead: boolean;
-  
+
   // Action
   actionUrl?: string;
   actionText?: string;
-  
+
   createdAt: Date;
 }
 
@@ -609,15 +609,159 @@ export interface AuditLog {
   recordId?: string;
   userId: string;
   userRole: UserRole;
-  
+
   // Changes
   oldValues?: Record<string, any>;
   newValues?: Record<string, any>;
-  
+
   ipAddress?: string;
   userAgent?: string;
-  
+
   createdAt: Date;
+}
+
+// =======================
+// COMMUNICATION & MESSAGING
+// =======================
+
+export type PortalType =
+  | 'admin'
+  | 'client'
+  | 'finance'
+  | 'inventory'
+  | 'project'
+  | 'sales'
+  | 'salesrep'
+  | 'vendor'
+  | 'hr'
+  | 'employee';
+
+export type MessageType =
+  | 'direct'
+  | 'portal_broadcast'
+  | 'global_announcement';
+
+export type MessageStatus =
+  | 'sent'
+  | 'delivered'
+  | 'read'
+  | 'failed';
+
+export interface Message {
+  id: string;
+  senderId: string; // User ID
+  senderName: string;
+  senderRole: UserRole;
+  senderPortal: PortalType;
+
+  // Recipients
+  recipientType: 'user' | 'portal' | 'global';
+  recipientIds?: string[]; // User IDs for specific users
+  recipientPortals?: PortalType[]; // Portal types for portal broadcasts
+  recipientRoles?: UserRole[]; // Roles for role-based broadcasts
+
+  // Message Content
+  type: MessageType;
+  subject: string;
+  content: string;
+  priority: 'low' | 'normal' | 'high' | 'urgent';
+
+  // Status & Tracking
+  status: MessageStatus;
+  sentAt: Date;
+  deliveredAt?: Date;
+  readAt?: Date;
+  readBy: Array<{
+    userId: string;
+    readAt: Date;
+  }>;
+
+  // Attachments
+  attachments?: Array<{
+    id: string;
+    name: string;
+    url: string;
+    size: number;
+    type: string;
+  }>;
+
+  // Thread/Conversation
+  threadId?: string; // For threaded conversations
+  parentMessageId?: string; // For replies
+
+  // Metadata
+  isAnnouncement: boolean;
+  expiresAt?: Date; // For announcements that expire
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ChatRoom {
+  id: string;
+  name: string;
+  type: 'direct' | 'group' | 'portal';
+  participants: Array<{
+    userId: string;
+    userName: string;
+    userRole: UserRole;
+    portal: PortalType;
+    joinedAt: Date;
+  }>;
+
+  // For portal/group chats
+  portalType?: PortalType;
+  description?: string;
+
+  // Settings
+  isActive: boolean;
+  lastMessageAt?: Date;
+  lastMessagePreview?: string;
+
+  createdBy: string; // User ID
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Announcement {
+  id: string;
+  title: string;
+  content: string;
+  priority: 'low' | 'normal' | 'high' | 'urgent';
+
+  // Target Audience
+  targetType: 'global' | 'portal' | 'role' | 'specific_users';
+  targetPortals?: PortalType[];
+  targetRoles?: UserRole[];
+  targetUserIds?: string[];
+
+  // Timing
+  publishedAt: Date;
+  expiresAt?: Date;
+  isActive: boolean;
+
+  // Author
+  createdBy: string; // User ID
+  createdByName: string;
+  createdByRole: UserRole;
+
+  // Engagement
+  views: number;
+  acknowledgments: Array<{
+    userId: string;
+    acknowledgedAt: Date;
+  }>;
+
+  // Attachments
+  attachments?: Array<{
+    id: string;
+    name: string;
+    url: string;
+    size: number;
+    type: string;
+  }>;
+
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 // =======================

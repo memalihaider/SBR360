@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Largify 360ERP - Enterprise Resource Planning System",
+  title: "SBR 360ERP - Powered by Largify Solutions",
   description: "Comprehensive 360° ERP system with multi-role portals for sales, inventory, projects, and finance management",
 };
 
