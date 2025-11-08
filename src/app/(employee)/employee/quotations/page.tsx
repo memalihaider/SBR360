@@ -1,10 +1,15 @@
-'use client';
+"use client";
 
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { FileText, DollarSign, Clock, CheckCircle, AlertTriangle, Eye, Download, MessageSquare, Calendar, TrendingUp } from 'lucide-react';
+import { toast } from 'sonner';
+
+import EmployeeQuotationFormDialog from '@/components/employee-quotation-form-dialog';
+import QuotationDetailsDialog from '@/components/quotation-details-dialog';
 
 export default function EmployeeQuotationsPage() {
   const quotationStats = [
@@ -42,7 +47,7 @@ export default function EmployeeQuotationsPage() {
     },
   ];
 
-  const activeQuotations = [
+  const [activeQuotations, setActiveQuotations] = useState([
     {
       id: 1,
       title: 'Website Redesign Project',
@@ -91,15 +96,18 @@ export default function EmployeeQuotationsPage() {
       priority: 'medium',
       assignedTo: 'David Kim',
     },
-  ];
+  ]);
 
-  const quotationTemplates = [
+  const [quotationTemplates, setQuotationTemplates] = useState([
     {
       id: 1,
       name: 'Web Development Standard',
       description: 'Standard quotation template for web development projects',
       lastUsed: '2024-11-25',
       usageCount: 15,
+      items: [
+        { id: 'tpl-1-i1', description: 'Website development', qty: 1, unitPrice: 45000, discount: 0, tax: 5 },
+      ],
     },
     {
       id: 2,
@@ -107,6 +115,9 @@ export default function EmployeeQuotationsPage() {
       description: 'Premium template for mobile application development',
       lastUsed: '2024-11-28',
       usageCount: 8,
+      items: [
+        { id: 'tpl-2-i1', description: 'Mobile app development', qty: 1, unitPrice: 75000, discount: 0, tax: 5 },
+      ],
     },
     {
       id: 3,
@@ -114,10 +125,13 @@ export default function EmployeeQuotationsPage() {
       description: 'Template for consulting and advisory services',
       lastUsed: '2024-11-15',
       usageCount: 12,
+      items: [
+        { id: 'tpl-3-i1', description: 'Consulting (per day)', qty: 10, unitPrice: 1000, discount: 0, tax: 0 },
+      ],
     },
-  ];
+  ]);
 
-  const recentActivities = [
+  const [recentActivities, setRecentActivities] = useState([
     {
       id: 1,
       action: 'Quotation Approved',
@@ -154,9 +168,9 @@ export default function EmployeeQuotationsPage() {
       value: 0,
       type: 'update',
     },
-  ];
+  ]);
 
-  const upcomingDeadlines = [
+  const [upcomingDeadlines, setUpcomingDeadlines] = useState([
     {
       id: 1,
       quotation: 'Mobile App Development',
@@ -181,7 +195,19 @@ export default function EmployeeQuotationsPage() {
       daysLeft: 0,
       status: 'expired',
     },
-  ];
+  ]);
+
+  const handleCreateQuotation = (q: any) => {
+    setActiveQuotations((prev) => [
+      { id: q.id, title: q.title, client: q.client, value: q.totalAmount, status: q.status, submittedDate: q.submittedDate, validUntil: q.validUntil, progress: 0, priority: 'medium', assignedTo: 'You' },
+      ...prev,
+    ]);
+    setRecentActivities((prev) => [
+      { id: Date.now(), action: 'New Quotation Created', quotation: q.title, client: q.client, timestamp: new Date().toISOString(), value: q.totalAmount, type: 'submission' },
+      ...prev,
+    ]);
+    toast.success('Quotation created');
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -319,15 +345,27 @@ export default function EmployeeQuotationsPage() {
                     <span>Valid until: {new Date(quotation.validUntil).toLocaleDateString()}</span>
                   </div>
                   <div className="flex justify-end space-x-2">
-                    <Button variant="outline" size="sm" className="text-red-600 border-red-300 hover:bg-red-50">
-                      <Eye className="h-4 w-4 mr-1" />
-                      View Details
-                    </Button>
-                    <Button variant="outline" size="sm" className="text-red-600 border-red-300 hover:bg-red-50">
+                    <QuotationDetailsDialog quotation={{ id: quotation.id, title: quotation.title, client: quotation.client, items: [{ id: 'i-1', description: quotation.title, qty: 1, unitPrice: quotation.value, discount: 0, tax: 0 }], totalAmount: quotation.value, status: quotation.status, submittedDate: quotation.submittedDate, validUntil: quotation.validUntil }}>
+                      <Button variant="outline" size="sm" className="text-red-600 border-red-300 hover:bg-red-50">
+                        <Eye className="h-4 w-4 mr-1" />
+                        View Details
+                      </Button>
+                    </QuotationDetailsDialog>
+                    <Button onClick={() => {
+                      const blob = new Blob([`Quotation: ${quotation.title}\nClient: ${quotation.client}\nTotal: $${quotation.value}`], { type: 'text/plain' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `${quotation.title.replace(/\s+/g, '_')}_quotation.txt`;
+                      document.body.appendChild(a);
+                      a.click();
+                      a.remove();
+                      URL.revokeObjectURL(url);
+                    }} variant="outline" size="sm" className="text-red-600 border-red-300 hover:bg-red-50">
                       <Download className="h-4 w-4 mr-1" />
                       Download
                     </Button>
-                    <Button variant="outline" size="sm" className="text-red-600 border-red-300 hover:bg-red-50">
+                    <Button onClick={() => toast('Open comments (mock)')} variant="outline" size="sm" className="text-red-600 border-red-300 hover:bg-red-50">
                       <MessageSquare className="h-4 w-4 mr-1" />
                       Comments
                     </Button>
@@ -368,11 +406,13 @@ export default function EmployeeQuotationsPage() {
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <Button variant="outline" size="sm" className="text-red-600 border-red-300 hover:bg-red-50">
-                      Use Template
-                    </Button>
-                    <Button variant="outline" size="sm" className="text-gray-600 border-gray-300 hover:bg-gray-50">
+                    <div className="flex items-center space-x-2">
+                    <EmployeeQuotationFormDialog templates={quotationTemplates} initialTemplateId={template.id} onCreate={handleCreateQuotation}>
+                      <Button variant="outline" size="sm" className="text-red-600 border-red-300 hover:bg-red-50">
+                        Use Template
+                      </Button>
+                    </EmployeeQuotationFormDialog>
+                    <Button onClick={() => toast('Edit template (mock)')} variant="outline" size="sm" className="text-gray-600 border-gray-300 hover:bg-gray-50">
                       Edit
                     </Button>
                   </div>
@@ -481,6 +521,7 @@ export default function EmployeeQuotationsPage() {
         </CardHeader>
         <CardContent className="pt-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <EmployeeQuotationFormDialog templates={quotationTemplates} onCreate={handleCreateQuotation}>
             <Button className="p-5 border-2 border-emerald-200 rounded-xl hover:bg-linear-to-br hover:from-emerald-50 hover:to-green-50 hover:border-emerald-300 text-left transition-all duration-200 group shadow-md hover:shadow-xl">
               <div className="flex items-center space-x-3 mb-2">
                 <div className="p-2 bg-emerald-100 rounded-lg group-hover:bg-emerald-200 transition-colors">
@@ -492,6 +533,7 @@ export default function EmployeeQuotationsPage() {
                 Start a new quotation from scratch or template
               </p>
             </Button>
+            </EmployeeQuotationFormDialog>
             <Button className="p-5 border-2 border-blue-200 rounded-xl hover:bg-linear-to-br hover:from-blue-50 hover:to-cyan-50 hover:border-blue-300 text-left transition-all duration-200 group shadow-md hover:shadow-xl">
               <div className="flex items-center space-x-3 mb-2">
                 <div className="p-2 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors">

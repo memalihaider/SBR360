@@ -13,8 +13,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { FileText, DollarSign, Clock, CheckCircle, XCircle, TrendingUp, Eye, Edit, Plus, Calendar, User, Building, Receipt, CreditCard } from 'lucide-react';
 import { mockData } from '@/lib/mock-data';
 import { Expense, Project, Vendor } from '@/types';
+import { useCurrencyStore } from '@/stores/currency';
 
 export default function AdminFinanceExpensesPage() {
+  const { formatAmount } = useCurrencyStore();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -208,7 +210,7 @@ export default function AdminFinanceExpensesPage() {
                         </div>
                         <div>
                           <p className="text-xs text-gray-500">Amount</p>
-                          <p className="text-sm font-semibold text-red-600">${expense.amount.toFixed(2)}</p>
+                          <p className="text-sm font-semibold text-red-600">{formatAmount(expense.amount)}</p>
                         </div>
                         <div>
                           <p className="text-xs text-gray-500">Approved By</p>
@@ -442,7 +444,7 @@ export default function AdminFinanceExpensesPage() {
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <div className="flex justify-between items-center">
                     <span className="text-lg font-semibold">Amount:</span>
-                    <span className="text-2xl font-bold text-red-600">${selectedExpense.amount.toFixed(2)}</span>
+                    <span className="text-2xl font-bold text-red-600">{formatAmount(selectedExpense.amount)}</span>
                   </div>
                 </div>
               </div>

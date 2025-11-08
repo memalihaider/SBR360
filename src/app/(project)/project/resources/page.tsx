@@ -1,11 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
 import mockData from '@/lib/mock-data';
 
@@ -28,11 +29,26 @@ interface TeamMember {
     startDate: Date;
     endDate: Date;
   }[];
+  avatar?: string;
 }
 
 export default function ResourcesPage() {
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterAvailability, setFilterAvailability] = useState<'all' | 'available' | 'partial' | 'full' | 'overloaded'>('all');
+
+  const handleAddResource = () => {
+    router.push('/project/resources/new');
+  };
+
+  const handleViewProfile = (resourceId: string) => {
+    router.push(`/project/resources/${resourceId}`);
+  };
+
+  const handleAssignResource = (resourceId: string) => {
+    // Navigate to resource profile with assignment modal open
+    router.push(`/project/resources/${resourceId}?action=assign`);
+  };
 
   // Generate mock team members
   const teamMembers: TeamMember[] = Array.from({ length: 20 }, (_, i) => {
@@ -79,6 +95,7 @@ export default function ResourcesPage() {
       allocatedHours,
       availability,
       projectAssignments,
+      avatar: `https://images.unsplash.com/photo-${1500000000000 + i}?w=100&h=100&fit=crop&crop=face`,
     };
   });
 
@@ -134,7 +151,7 @@ export default function ResourcesPage() {
           <h1 className="text-3xl font-bold text-gray-900">Resources</h1>
           <p className="text-gray-600 mt-1">Team members and resource allocation</p>
         </div>
-        <Button className="bg-purple-600 hover:bg-purple-700 text-white">
+        <Button className="bg-purple-600 hover:bg-purple-700 text-white" onClick={handleAddResource}>
           <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
@@ -229,6 +246,9 @@ export default function ResourcesPage() {
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
                     <Avatar className="w-12 h-12 bg-purple-600 text-white">
+                      {member.avatar ? (
+                        <AvatarImage src={member.avatar} alt={member.name} />
+                      ) : null}
                       <AvatarFallback>{member.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
                     </Avatar>
                     <div>
@@ -311,8 +331,8 @@ export default function ResourcesPage() {
 
                 {/* Actions */}
                 <div className="flex gap-2 pt-2">
-                  <Button size="sm" variant="outline" className="flex-1">View Profile</Button>
-                  <Button size="sm" variant="outline" className="flex-1">Assign</Button>
+                  <Button size="sm" variant="outline" className="flex-1" onClick={() => handleViewProfile(member.id)}>View Profile</Button>
+                  <Button size="sm" variant="outline" className="flex-1" onClick={() => handleAssignResource(member.id)}>Assign</Button>
                 </div>
               </CardContent>
             </Card>

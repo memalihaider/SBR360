@@ -4,9 +4,11 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import mockData from '@/lib/mock-data';
+import { useCurrencyStore } from '@/stores/currency';
 
 export default function FinancialReportsPage() {
   const [selectedPeriod, setSelectedPeriod] = useState<'month' | 'quarter' | 'year'>('month');
+  const { formatAmount } = useCurrencyStore();
 
   // Calculate financial metrics
   const totalRevenue = mockData.getTotalRevenue();
@@ -70,7 +72,7 @@ export default function FinancialReportsPage() {
             <CardTitle className="text-sm font-medium text-gray-600">Total Revenue</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-red-600">${totalRevenue.toLocaleString()}</div>
+            <div className="text-3xl font-bold text-red-600">{formatAmount(totalRevenue)}</div>
             <p className="text-sm text-gray-500 mt-1">+12.5% from last period</p>
           </CardContent>
         </Card>
@@ -80,7 +82,7 @@ export default function FinancialReportsPage() {
             <CardTitle className="text-sm font-medium text-gray-600">Project Profit</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-blue-600">${projectProfit.toLocaleString()}</div>
+            <div className="text-3xl font-bold text-blue-600">{formatAmount(projectProfit)}</div>
             <p className="text-sm text-gray-500 mt-1">
               {((projectProfit / projectRevenue) * 100).toFixed(1)}% margin
             </p>
@@ -93,7 +95,7 @@ export default function FinancialReportsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-purple-600">{totalProjects}</div>
-            <p className="text-sm text-gray-500 mt-1">${projectRevenue.toLocaleString()} value</p>
+            <p className="text-sm text-gray-500 mt-1">{formatAmount(projectRevenue)} value</p>
           </CardContent>
         </Card>
 
@@ -125,7 +127,7 @@ export default function FinancialReportsPage() {
                       <div className="flex justify-between items-center mb-2">
                         <span className="font-medium text-gray-700">{category}</span>
                         <span className="text-sm font-bold text-gray-900">
-                          ${revenue.toLocaleString()} ({percentage.toFixed(1)}%)
+                          {formatAmount(revenue)} ({percentage.toFixed(1)}%)
                         </span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2">
@@ -150,7 +152,7 @@ export default function FinancialReportsPage() {
               <div className="flex justify-between items-center p-4 bg-red-50 rounded-lg">
                 <div>
                   <p className="text-sm text-gray-600">Total Revenue</p>
-                  <p className="text-2xl font-bold text-red-700">${projectRevenue.toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-red-700">{formatAmount(projectRevenue)}</p>
                 </div>
                 <svg className="w-12 h-12 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -160,7 +162,7 @@ export default function FinancialReportsPage() {
               <div className="flex justify-between items-center p-4 bg-red-50 rounded-lg">
                 <div>
                   <p className="text-sm text-gray-600">Total Costs</p>
-                  <p className="text-2xl font-bold text-red-700">${projectCosts.toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-red-700">{formatAmount(projectCosts)}</p>
                 </div>
                 <svg className="w-12 h-12 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -170,7 +172,7 @@ export default function FinancialReportsPage() {
               <div className="flex justify-between items-center p-4 bg-blue-50 rounded-lg">
                 <div>
                   <p className="text-sm text-gray-600">Net Profit</p>
-                  <p className="text-2xl font-bold text-blue-700">${projectProfit.toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-blue-700">{formatAmount(projectProfit)}</p>
                 </div>
                 <svg className="w-12 h-12 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
@@ -224,14 +226,14 @@ export default function FinancialReportsPage() {
                           </span>
                         </td>
                         <td className="py-3 px-4 text-right font-medium">
-                          ${project.budgetAmount.toLocaleString()}
+                          {formatAmount(project.budgetAmount)}
                         </td>
                         <td className="py-3 px-4 text-right">
-                          ${project.actualCost.toLocaleString()}
+                          {formatAmount(project.actualCost)}
                         </td>
                         <td className="py-3 px-4 text-right">
                           <span className={profit >= 0 ? 'text-green-600 font-bold' : 'text-red-600 font-bold'}>
-                            ${profit.toLocaleString()}
+                            {formatAmount(profit)}
                           </span>
                         </td>
                         <td className="py-3 px-4 text-right">

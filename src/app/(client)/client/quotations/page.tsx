@@ -1,10 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import AddClientQuotationDialog from '@/components/add-client-quotation-dialog';
+import ClientQuotationDetailsDialog from '@/components/client-quotation-details-dialog';
 
 interface Quotation {
   id: string;
@@ -29,7 +31,7 @@ export default function ClientQuotationsPage() {
   const [filterStatus, setFilterStatus] = useState<'all' | 'sent' | 'accepted' | 'rejected'>('all');
 
   // Generate mock quotations
-  const quotations: Quotation[] = Array.from({ length: 10 }, (_, i) => {
+  const quotationsInitial: Quotation[] = Array.from({ length: 8 }, (_, i) => {
     const statuses: ('sent' | 'accepted' | 'rejected')[] = ['sent', 'accepted', 'rejected'];
     const status = statuses[Math.floor(Math.random() * statuses.length)];
     const amount = Math.floor(Math.random() * 500000) + 50000;
@@ -67,6 +69,8 @@ export default function ClientQuotationsPage() {
     };
   });
 
+  const [quotations, setQuotations] = useState<Quotation[]>(quotationsInitial);
+
   const getFilteredQuotations = () => {
     let filtered = quotations;
 
@@ -89,6 +93,36 @@ export default function ClientQuotationsPage() {
   const acceptedValue = quotations.filter(q => q.status === 'accepted').reduce((sum, q) => sum + q.amount, 0);
   const pendingCount = quotations.filter(q => q.status === 'sent').length;
 
+  const handleCreateQuotation = (q: Quotation) => {
+    setQuotations((s) => [q, ...s]);
+  };
+
+  const handleDownload = (q: Quotation) => {
+    const content = `Quotation: ${q.quotationNumber}\nProject: ${q.projectName}\nAmount: $${q.amount.toLocaleString()}`;
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${q.quotationNumber}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleAccept = (id: string) => {
+    setQuotations((s) => s.map((q) => q.id === id ? { ...q, status: 'accepted' } : q));
+  };
+
+  const handleDecline = (id: string) => {
+    setQuotations((s) => s.map((q) => q.id === id ? { ...q, status: 'rejected' } : q));
+  };
+
+  const handleSend = (id: string) => {
+    setQuotations((s) => s.map((q) => q.id === id ? { ...q, status: 'sent' } : q));
+    alert('Quotation sent (mock).');
+  };
+
   const getStatusBadge = (status: string) => {
     const badges: Record<string, string> = {
       draft: 'bg-gray-100 text-gray-800',
@@ -108,12 +142,14 @@ export default function ClientQuotationsPage() {
           <h1 className="text-3xl font-bold text-gray-900">Quotations</h1>
           <p className="text-gray-600 mt-1">View and manage your quotation requests</p>
         </div>
-        <button className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-sm font-medium transition-colors">
-          <svg className="w-4 h-4 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Request Quotation
-        </button>
+        <AddClientQuotationDialog onCreate={handleCreateQuotation}>
+          <button className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-sm font-medium transition-colors">
+            <svg className="w-4 h-4 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Request Quotation
+          </button>
+        </AddClientQuotationDialog>
       </div>
 
       {/* Stats Cards */}
@@ -275,18 +311,23 @@ export default function ClientQuotationsPage() {
               )}
 
               <div className="flex gap-2">
-                <button className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-sm font-medium transition-colors">
-                  View Details
-                </button>
-                <button className="px-4 py-2 border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-md text-sm font-medium transition-colors">
+                <ClientQuotationDetailsDialog quotation={quotation} onAccept={handleAccept} onDecline={handleDecline} onSend={handleSend}>
+                  <button className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-sm font-medium transition-colors">
+                    View Details
+                  </button>
+                </ClientQuotationDetailsDialog>
+                <button
+                  className="px-4 py-2 border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-md text-sm font-medium transition-colors"
+                  onClick={() => handleDownload(quotation)}
+                >
                   Download PDF
                 </button>
                 {quotation.status === 'sent' && (
                   <>
-                    <button className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md text-sm font-medium transition-colors">
+                    <button className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md text-sm font-medium transition-colors" onClick={() => handleAccept(quotation.id)}>
                       Accept
                     </button>
-                    <button className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm font-medium transition-colors">
+                    <button className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm font-medium transition-colors" onClick={() => handleDecline(quotation.id)}>
                       Decline
                     </button>
                   </>

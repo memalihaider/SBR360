@@ -6,13 +6,21 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import mockData from '@/lib/mock-data';
+import { useCurrencyStore } from '@/stores/currency';
+import { ViewPaymentModal } from '@/components/view-payment-modal';
+import { toast } from 'sonner';
 
 export default function VendorPaymentsPage() {
+  const { formatAmount } = useCurrencyStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
 
-  // Mock payment transactions
-  const payments = mockData.projects.slice(0, 20).map((project, index) => ({
+  // Modal state
+  const [showViewPaymentModal, setShowViewPaymentModal] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState<any>(null);
+
+  // Payments state
+  const [payments] = useState(() => mockData.projects.slice(0, 20).map((project, index) => ({
     id: `PAY-${3000 + index}`,
     paymentNumber: `PAY-${3000 + index}`,
     invoiceNumber: `VND-INV-${2000 + index}`,
@@ -24,7 +32,7 @@ export default function VendorPaymentsPage() {
     status: ['completed', 'pending', 'processing', 'failed'][Math.floor(Math.random() * 4)] as string,
     transactionId: `TXN-${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
     bankReference: `BNK-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
-  }));
+  })));
 
   const filteredPayments = payments.filter(payment => {
     const matchesSearch = payment.paymentNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -37,13 +45,13 @@ export default function VendorPaymentsPage() {
   const stats = [
     { 
       label: 'Total Received', 
-      value: `$${payments.filter(p => p.status === 'completed').reduce((sum, p) => sum + p.amount, 0).toLocaleString()}`, 
+      value: formatAmount(payments.filter(p => p.status === 'completed').reduce((sum, p) => sum + p.amount, 0)), 
       color: 'text-green-600', 
       icon: '💵' 
     },
     { 
       label: 'Pending', 
-      value: `$${payments.filter(p => p.status === 'pending' || p.status === 'processing').reduce((sum, p) => sum + p.amount, 0).toLocaleString()}`, 
+      value: formatAmount(payments.filter(p => p.status === 'pending' || p.status === 'processing').reduce((sum, p) => sum + p.amount, 0)), 
       color: 'text-yellow-600', 
       icon: '⏳' 
     },
@@ -75,6 +83,72 @@ export default function VendorPaymentsPage() {
     }
   };
 
+  // Export functionality
+  const handleExportReport = () => {
+    try {
+      // Create CSV content
+      const headers = [
+        'Payment Number',
+        'Invoice Number',
+        'Purchase Order',
+        'Project Name',
+        'Amount',
+        'Payment Date',
+        'Payment Method',
+        'Status',
+        'Transaction ID',
+        'Bank Reference'
+      ];
+
+      const csvContent = [
+        headers.join(','),
+        ...filteredPayments.map(payment => [
+          payment.paymentNumber,
+          payment.invoiceNumber,
+          payment.purchaseOrder,
+          `"${payment.projectName}"`, // Wrap in quotes to handle commas
+          payment.amount,
+          payment.paymentDate,
+          payment.method,
+          payment.status,
+          payment.transactionId,
+          payment.bankReference
+        ].join(','))
+      ].join('\n');
+
+      // Create and download file
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `payment-report-${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast.success('Payment report exported successfully');
+    } catch (error) {
+      toast.error('Failed to export report. Please try again.');
+    }
+  };
+
+  // Modal handlers
+  const handleViewPayment = (payment: any) => {
+    setSelectedPayment(payment);
+    setShowViewPaymentModal(true);
+  };
+
+  const handleDownloadReceipt = (payment: any) => {
+    // This will be handled in the modal
+    handleViewPayment(payment);
+  };
+
+  const handleCloseModals = () => {
+    setShowViewPaymentModal(false);
+    setSelectedPayment(null);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -83,7 +157,7 @@ export default function VendorPaymentsPage() {
           <h1 className="text-3xl font-bold text-gray-900">Payment Transactions</h1>
           <p className="text-gray-600 mt-1">Track all payment transactions and history</p>
         </div>
-        <Button className="bg-pink-600 hover:bg-pink-700 text-white">
+        <Button className="bg-pink-600 hover:bg-pink-700 text-white" onClick={handleExportReport}>
           <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
@@ -209,11 +283,11 @@ export default function VendorPaymentsPage() {
                   <div>
                     <p className="text-sm text-gray-600 mb-1">Amount</p>
                     <p className="text-3xl font-bold text-green-600">
-                      ${payment.amount.toLocaleString()}
+                      {formatAmount(payment.amount)}
                     </p>
                   </div>
                   <div className="flex flex-col gap-2 mt-4">
-                    <Button className="w-full bg-pink-600 hover:bg-pink-700 text-white">
+                    <Button className="w-full bg-pink-600 hover:bg-pink-700 text-white" onClick={() => handleViewPayment(payment)}>
                       <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
@@ -221,7 +295,7 @@ export default function VendorPaymentsPage() {
                       View Details
                     </Button>
                     {payment.status === 'completed' && (
-                      <Button variant="outline" className="w-full border-green-600 text-green-600 hover:bg-green-50">
+                      <Button variant="outline" className="w-full border-green-600 text-green-600 hover:bg-green-50" onClick={() => handleDownloadReceipt(payment)}>
                         <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
@@ -247,6 +321,13 @@ export default function VendorPaymentsPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Modals */}
+      <ViewPaymentModal
+        isOpen={showViewPaymentModal}
+        onClose={handleCloseModals}
+        payment={selectedPayment}
+      />
     </div>
   );
 }

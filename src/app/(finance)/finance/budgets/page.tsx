@@ -1,10 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useCurrencyStore } from '@/stores/currency';
+import { toast } from 'sonner';
 
 interface Budget {
   id: string;
@@ -17,11 +24,395 @@ interface Budget {
   utilizationRate: number;
   status: 'healthy' | 'warning' | 'critical' | 'exceeded';
   lastUpdated: Date;
+  description?: string;
+}
+
+interface BudgetForm {
+  category: string;
+  department: string;
+  period: string;
+  allocatedAmount: string;
+  description: string;
+}
+
+interface ViewBudgetDialogProps {
+  budget: Budget | null;
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+interface EditBudgetDialogProps {
+  budget: Budget | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (updatedBudget: Budget) => void;
+}
+
+interface CreateBudgetDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (budget: Omit<Budget, 'id' | 'spentAmount' | 'remainingAmount' | 'utilizationRate' | 'status' | 'lastUpdated'>) => void;
+}
+
+function ViewBudgetDialog({ budget, isOpen, onClose }: ViewBudgetDialogProps) {
+  const { formatAmount } = useCurrencyStore();
+
+  if (!budget) return null;
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Budget Details - {budget.category}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label className="text-sm font-medium text-gray-600">Department</Label>
+              <p className="text-lg font-semibold">{budget.department}</p>
+            </div>
+            <div>
+              <Label className="text-sm font-medium text-gray-600">Period</Label>
+              <p className="text-lg font-semibold">{budget.period}</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            <Card>
+              <CardContent className="pt-4">
+                <div className="text-center">
+                  <p className="text-sm text-gray-600">Allocated</p>
+                  <p className="text-2xl font-bold text-gray-900">{formatAmount(budget.allocatedAmount)}</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-4">
+                <div className="text-center">
+                  <p className="text-sm text-gray-600">Spent</p>
+                  <p className="text-2xl font-bold text-blue-600">{formatAmount(budget.spentAmount)}</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-4">
+                <div className="text-center">
+                  <p className="text-sm text-gray-600">Remaining</p>
+                  <p className={`text-2xl font-bold ${budget.remainingAmount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {formatAmount(Math.abs(budget.remainingAmount))}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div>
+            <Label className="text-sm font-medium text-gray-600">Utilization</Label>
+            <div className="mt-2">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-gray-600">{budget.utilizationRate}% utilized</span>
+                <Badge className={budget.status === 'healthy' ? 'bg-green-100 text-green-800' :
+                                budget.status === 'warning' ? 'bg-yellow-100 text-yellow-800' :
+                                budget.status === 'critical' ? 'bg-orange-100 text-orange-800' :
+                                'bg-red-100 text-red-800'}>
+                  {budget.status.toUpperCase()}
+                </Badge>
+              </div>
+              <Progress value={Math.min(budget.utilizationRate, 100)} className="h-3" />
+            </div>
+          </div>
+
+          {budget.description && (
+            <div>
+              <Label className="text-sm font-medium text-gray-600">Description</Label>
+              <p className="text-sm text-gray-700 mt-1">{budget.description}</p>
+            </div>
+          )}
+
+          <div>
+            <Label className="text-sm font-medium text-gray-600">Last Updated</Label>
+            <p className="text-sm text-gray-700">{budget.lastUpdated.toLocaleDateString()}</p>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EditBudgetDialog({ budget, isOpen, onClose, onSave }: EditBudgetDialogProps) {
+  const [form, setForm] = useState<BudgetForm>({
+    category: budget?.category || '',
+    department: budget?.department || '',
+    period: budget?.period || '',
+    allocatedAmount: budget?.allocatedAmount.toString() || '',
+    description: budget?.description || '',
+  });
+
+  const handleSave = () => {
+    if (!budget) return;
+
+    if (!form.category || !form.department || !form.period || !form.allocatedAmount) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    const allocatedAmount = parseFloat(form.allocatedAmount);
+    if (isNaN(allocatedAmount) || allocatedAmount <= 0) {
+      toast.error('Please enter a valid allocated amount');
+      return;
+    }
+
+    const updatedBudget: Budget = {
+      ...budget,
+      category: form.category,
+      department: form.department,
+      period: form.period,
+      allocatedAmount,
+      remainingAmount: allocatedAmount - budget.spentAmount,
+      utilizationRate: (budget.spentAmount / allocatedAmount) * 100,
+      description: form.description,
+      lastUpdated: new Date(),
+    };
+
+    // Recalculate status
+    const utilizationRate = updatedBudget.utilizationRate;
+    if (utilizationRate > 100) updatedBudget.status = 'exceeded';
+    else if (utilizationRate > 90) updatedBudget.status = 'critical';
+    else if (utilizationRate > 75) updatedBudget.status = 'warning';
+    else updatedBudget.status = 'healthy';
+
+    onSave(updatedBudget);
+    onClose();
+    toast.success('Budget updated successfully');
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Edit Budget</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="edit-category">Category *</Label>
+            <Select value={form.category} onValueChange={(value) => setForm({ ...form, category: value })}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Salaries & Benefits">Salaries & Benefits</SelectItem>
+                <SelectItem value="Office Operations">Office Operations</SelectItem>
+                <SelectItem value="Marketing & Advertising">Marketing & Advertising</SelectItem>
+                <SelectItem value="Technology & Software">Technology & Software</SelectItem>
+                <SelectItem value="Travel & Entertainment">Travel & Entertainment</SelectItem>
+                <SelectItem value="Training & Development">Training & Development</SelectItem>
+                <SelectItem value="Equipment & Supplies">Equipment & Supplies</SelectItem>
+                <SelectItem value="Professional Services">Professional Services</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="edit-department">Department *</Label>
+            <Select value={form.department} onValueChange={(value) => setForm({ ...form, department: value })}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select department" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Engineering">Engineering</SelectItem>
+                <SelectItem value="Sales">Sales</SelectItem>
+                <SelectItem value="Marketing">Marketing</SelectItem>
+                <SelectItem value="Operations">Operations</SelectItem>
+                <SelectItem value="HR">HR</SelectItem>
+                <SelectItem value="Finance">Finance</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="edit-period">Period *</Label>
+            <Select value={form.period} onValueChange={(value) => setForm({ ...form, period: value })}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select period" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Oct 2025">Oct 2025</SelectItem>
+                <SelectItem value="Q4 2025">Q4 2025</SelectItem>
+                <SelectItem value="2025">2025</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="edit-amount">Allocated Amount *</Label>
+            <Input
+              id="edit-amount"
+              type="number"
+              value={form.allocatedAmount}
+              onChange={(e) => setForm({ ...form, allocatedAmount: e.target.value })}
+              placeholder="Enter amount"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="edit-description">Description</Label>
+            <Textarea
+              id="edit-description"
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              placeholder="Enter budget description"
+              rows={3}
+            />
+          </div>
+
+          <div className="flex gap-2 pt-4">
+            <Button onClick={handleSave} className="flex-1">Save Changes</Button>
+            <Button variant="outline" onClick={onClose} className="flex-1">Cancel</Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function CreateBudgetDialog({ isOpen, onClose, onSave }: CreateBudgetDialogProps) {
+  const [form, setForm] = useState<BudgetForm>({
+    category: '',
+    department: '',
+    period: '',
+    allocatedAmount: '',
+    description: '',
+  });
+
+  const handleSave = () => {
+    if (!form.category || !form.department || !form.period || !form.allocatedAmount) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    const allocatedAmount = parseFloat(form.allocatedAmount);
+    if (isNaN(allocatedAmount) || allocatedAmount <= 0) {
+      toast.error('Please enter a valid allocated amount');
+      return;
+    }
+
+    onSave({
+      category: form.category,
+      department: form.department,
+      period: form.period,
+      allocatedAmount,
+      description: form.description,
+    });
+
+    setForm({
+      category: '',
+      department: '',
+      period: '',
+      allocatedAmount: '',
+      description: '',
+    });
+
+    onClose();
+    toast.success('Budget created successfully');
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Create New Budget</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="category">Category *</Label>
+            <Select value={form.category} onValueChange={(value) => setForm({ ...form, category: value })}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Salaries & Benefits">Salaries & Benefits</SelectItem>
+                <SelectItem value="Office Operations">Office Operations</SelectItem>
+                <SelectItem value="Marketing & Advertising">Marketing & Advertising</SelectItem>
+                <SelectItem value="Technology & Software">Technology & Software</SelectItem>
+                <SelectItem value="Travel & Entertainment">Travel & Entertainment</SelectItem>
+                <SelectItem value="Training & Development">Training & Development</SelectItem>
+                <SelectItem value="Equipment & Supplies">Equipment & Supplies</SelectItem>
+                <SelectItem value="Professional Services">Professional Services</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="department">Department *</Label>
+            <Select value={form.department} onValueChange={(value) => setForm({ ...form, department: value })}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select department" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Engineering">Engineering</SelectItem>
+                <SelectItem value="Sales">Sales</SelectItem>
+                <SelectItem value="Marketing">Marketing</SelectItem>
+                <SelectItem value="Operations">Operations</SelectItem>
+                <SelectItem value="HR">HR</SelectItem>
+                <SelectItem value="Finance">Finance</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="period">Period *</Label>
+            <Select value={form.period} onValueChange={(value) => setForm({ ...form, period: value })}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select period" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Oct 2025">Oct 2025</SelectItem>
+                <SelectItem value="Q4 2025">Q4 2025</SelectItem>
+                <SelectItem value="2025">2025</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="amount">Allocated Amount *</Label>
+            <Input
+              id="amount"
+              type="number"
+              value={form.allocatedAmount}
+              onChange={(e) => setForm({ ...form, allocatedAmount: e.target.value })}
+              placeholder="Enter amount"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              placeholder="Enter budget description"
+              rows={3}
+            />
+          </div>
+
+          <div className="flex gap-2 pt-4">
+            <Button onClick={handleSave} className="flex-1">Create Budget</Button>
+            <Button variant="outline" onClick={onClose} className="flex-1">Cancel</Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 export default function BudgetsPage() {
+  const { formatAmount } = useCurrencyStore();
   const [selectedPeriod, setSelectedPeriod] = useState<'monthly' | 'quarterly' | 'yearly'>('monthly');
   const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
+  const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [viewingBudget, setViewingBudget] = useState<Budget | null>(null);
+  const [editingBudget, setEditingBudget] = useState<Budget | null>(null);
 
   const departments = ['Engineering', 'Sales', 'Marketing', 'Operations', 'HR', 'Finance'];
   const categories = [
@@ -35,34 +426,54 @@ export default function BudgetsPage() {
     'Professional Services',
   ];
 
-  // Generate mock budgets
-  const budgets: Budget[] = departments.flatMap((dept) =>
-    categories.map((category, idx) => {
-      const allocated = Math.floor(Math.random() * 500000) + 100000;
-      const spent = Math.floor(Math.random() * allocated * 1.2);
-      const remaining = allocated - spent;
-      const utilizationRate = (spent / allocated) * 100;
-      
-      let status: 'healthy' | 'warning' | 'critical' | 'exceeded';
-      if (utilizationRate > 100) status = 'exceeded';
-      else if (utilizationRate > 90) status = 'critical';
-      else if (utilizationRate > 75) status = 'warning';
-      else status = 'healthy';
+  // Generate deterministic mock budgets using mathematical patterns instead of Math.random()
+  const generateBudgets = useMemo(() => {
+    return departments.flatMap((dept, deptIndex) =>
+      categories.map((category, catIndex) => {
+        const baseAmount = 100000;
+        const deptMultiplier = (deptIndex + 1) * 0.5;
+        const catMultiplier = (catIndex + 1) * 0.3;
+        const allocated = Math.floor(baseAmount + (deptMultiplier * catMultiplier * 200000));
 
-      return {
-        id: `BUD-${dept}-${idx}`,
-        category,
-        department: dept,
-        period: selectedPeriod === 'monthly' ? 'Oct 2025' : selectedPeriod === 'quarterly' ? 'Q4 2025' : '2025',
-        allocatedAmount: allocated,
-        spentAmount: spent,
-        remainingAmount: remaining,
-        utilizationRate: Math.round(utilizationRate),
-        status,
-        lastUpdated: new Date(),
-      };
-    })
-  );
+        // Use sine/cosine functions for deterministic "random" spending
+        const spendingFactor = Math.sin(deptIndex * catIndex + 1) * 0.5 + 0.5; // 0-1 range
+        const spent = Math.floor(allocated * spendingFactor * 1.2);
+
+        const remaining = allocated - spent;
+        const utilizationRate = Math.round((spent / allocated) * 100);
+
+        let status: 'healthy' | 'warning' | 'critical' | 'exceeded';
+        if (utilizationRate > 100) status = 'exceeded';
+        else if (utilizationRate > 90) status = 'critical';
+        else if (utilizationRate > 75) status = 'warning';
+        else status = 'healthy';
+
+        return {
+          id: `BUD-${dept}-${catIndex}`,
+          category,
+          department: dept,
+          period: selectedPeriod === 'monthly' ? 'Oct 2025' : selectedPeriod === 'quarterly' ? 'Q4 2025' : '2025',
+          allocatedAmount: allocated,
+          spentAmount: spent,
+          remainingAmount: remaining,
+          utilizationRate,
+          status,
+          lastUpdated: new Date(),
+          description: `${category} budget for ${dept} department`,
+        };
+      })
+    );
+  }, [selectedPeriod]);
+
+  // Initialize budgets on first load
+  useEffect(() => {
+    setBudgets(generateBudgets);
+  }, []);
+
+  // Update budgets when period changes
+  useEffect(() => {
+    setBudgets(generateBudgets);
+  }, [generateBudgets]);
 
   const getFilteredBudgets = () => {
     let filtered = budgets;
@@ -113,6 +524,24 @@ export default function BudgetsPage() {
     };
   });
 
+  const handleCreateBudget = (newBudget: Omit<Budget, 'id' | 'spentAmount' | 'remainingAmount' | 'utilizationRate' | 'status' | 'lastUpdated'>) => {
+    const budget: Budget = {
+      ...newBudget,
+      id: `BUD-${Date.now()}`,
+      spentAmount: 0,
+      remainingAmount: newBudget.allocatedAmount,
+      utilizationRate: 0,
+      status: 'healthy',
+      lastUpdated: new Date(),
+    };
+
+    setBudgets(prev => [...prev, budget]);
+  };
+
+  const handleUpdateBudget = (updatedBudget: Budget) => {
+    setBudgets(prev => prev.map(b => b.id === updatedBudget.id ? updatedBudget : b));
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -121,7 +550,10 @@ export default function BudgetsPage() {
           <h1 className="text-3xl font-bold text-gray-900">Budgets</h1>
           <p className="text-gray-600 mt-1">Plan and track departmental budgets</p>
         </div>
-        <Button className="bg-yellow-600 hover:bg-yellow-700 text-white">
+        <Button
+          className="bg-yellow-600 hover:bg-yellow-700 text-white"
+          onClick={() => setIsCreateDialogOpen(true)}
+        >
           <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
@@ -136,7 +568,7 @@ export default function BudgetsPage() {
             <CardTitle className="text-sm font-medium text-gray-600">Total Allocated</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-gray-900">${totalAllocated.toLocaleString()}</div>
+            <div className="text-3xl font-bold text-gray-900">{formatAmount(totalAllocated)}</div>
             <p className="text-sm text-gray-500 mt-1">Budget allocation</p>
           </CardContent>
         </Card>
@@ -146,7 +578,7 @@ export default function BudgetsPage() {
             <CardTitle className="text-sm font-medium text-gray-600">Total Spent</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-blue-600">${totalSpent.toLocaleString()}</div>
+            <div className="text-3xl font-bold text-blue-600">{formatAmount(totalSpent)}</div>
             <p className="text-sm text-gray-500 mt-1">
               {Math.round((totalSpent / totalAllocated) * 100)}% utilized
             </p>
@@ -159,7 +591,7 @@ export default function BudgetsPage() {
           </CardHeader>
           <CardContent>
             <div className={`text-3xl font-bold ${totalRemaining >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              ${Math.abs(totalRemaining).toLocaleString()}
+              {formatAmount(Math.abs(totalRemaining))}
             </div>
             <p className="text-sm text-gray-500 mt-1">
               {totalRemaining >= 0 ? 'Available' : 'Over budget'}
@@ -222,13 +654,13 @@ export default function BudgetsPage() {
                       <span className="font-semibold text-gray-900">{dept.department}</span>
                       <div className="flex items-center gap-4 text-sm">
                         <span className="text-gray-600">
-                          Allocated: ${dept.allocated.toLocaleString()}
+                          Allocated: {formatAmount(dept.allocated)}
                         </span>
                         <span className="text-blue-600">
-                          Spent: ${dept.spent.toLocaleString()}
+                          Spent: {formatAmount(dept.spent)}
                         </span>
                         <span className={dept.remaining >= 0 ? 'text-green-600' : 'text-red-600'}>
-                          Remaining: ${Math.abs(dept.remaining).toLocaleString()}
+                          Remaining: {formatAmount(Math.abs(dept.remaining))}
                         </span>
                         <span className={`font-semibold ${getUtilizationColor(dept.utilization)}`}>
                           {dept.utilization}%
@@ -278,16 +710,16 @@ export default function BudgetsPage() {
                       <span className="text-sm text-gray-700">{budget.period}</span>
                     </td>
                     <td className="py-3 px-4 text-right">
-                      <span className="text-gray-700">${budget.allocatedAmount.toLocaleString()}</span>
+                      <span className="text-gray-700">{formatAmount(budget.allocatedAmount)}</span>
                     </td>
                     <td className="py-3 px-4 text-right">
                       <span className={budget.status === 'exceeded' ? 'text-red-600 font-semibold' : 'text-gray-700'}>
-                        ${budget.spentAmount.toLocaleString()}
+                        {formatAmount(budget.spentAmount)}
                       </span>
                     </td>
                     <td className="py-3 px-4 text-right">
                       <span className={budget.remainingAmount < 0 ? 'text-red-600 font-semibold' : 'text-green-600'}>
-                        ${Math.abs(budget.remainingAmount).toLocaleString()}
+                        {formatAmount(Math.abs(budget.remainingAmount))}
                         {budget.remainingAmount < 0 && ' (over)'}
                       </span>
                     </td>
@@ -316,8 +748,20 @@ export default function BudgetsPage() {
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex items-center justify-center gap-2">
-                        <Button size="sm" variant="outline">View</Button>
-                        <Button size="sm" variant="outline">Edit</Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setViewingBudget(budget)}
+                        >
+                          View
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setEditingBudget(budget)}
+                        >
+                          Edit
+                        </Button>
                       </div>
                     </td>
                   </tr>
@@ -327,6 +771,26 @@ export default function BudgetsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Dialogs */}
+      <CreateBudgetDialog
+        isOpen={isCreateDialogOpen}
+        onClose={() => setIsCreateDialogOpen(false)}
+        onSave={handleCreateBudget}
+      />
+
+      <ViewBudgetDialog
+        budget={viewingBudget}
+        isOpen={!!viewingBudget}
+        onClose={() => setViewingBudget(null)}
+      />
+
+      <EditBudgetDialog
+        budget={editingBudget}
+        isOpen={!!editingBudget}
+        onClose={() => setEditingBudget(null)}
+        onSave={handleUpdateBudget}
+      />
     </div>
   );
 }

@@ -3,11 +3,15 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Briefcase, Clock, CheckCircle, AlertCircle } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useCurrencyStore } from '@/stores/currency';
 
 export default function ProjectDashboard() {
+  const router = useRouter();
+  const { formatAmount } = useCurrencyStore();
   const metrics = [
     {
-      title: 'Active Projects',
+      title: 'Active Products',
       value: '28',
       change: '+4',
       changeType: 'positive' as const,
@@ -28,7 +32,7 @@ export default function ProjectDashboard() {
       icon: AlertCircle,
     },
     {
-      title: 'Completion Rate',
+      title: 'Development Rate',
       value: '78%',
       change: '+5%',
       changeType: 'positive' as const,
@@ -38,51 +42,64 @@ export default function ProjectDashboard() {
 
   const activeProjects = [
     {
-      name: 'Smart Office Building - Tech Corp',
+      name: 'IoT Sensor Network - Tech Corp',
       client: 'Tech Corp Industries',
       progress: 85,
       status: 'on_track',
       deadline: '2024-11-15',
-      budget: '$450,000',
+      budget: 450000,
     },
     {
-      name: 'Warehouse Automation System',
+      name: 'Industrial Control System',
       client: 'LogiFlow Solutions',
       progress: 45,
       status: 'delayed',
       deadline: '2024-10-30',
-      budget: '$280,000',
+      budget: 280000,
     },
     {
-      name: 'Retail Chain Expansion - Phase 2',
+      name: 'Smart Grid Controller - Phase 2',
       client: 'MegaMart Retail',
       progress: 92,
       status: 'on_track',
       deadline: '2024-10-25',
-      budget: '$175,000',
+      budget: 175000,
     },
     {
-      name: 'Hospital Emergency Systems',
+      name: 'Medical Device Interface',
       client: 'HealthCare Central',
       progress: 60,
       status: 'at_risk',
       deadline: '2024-11-20',
-      budget: '$520,000',
+      budget: 520000,
     },
   ];
 
   const upcomingTasks = [
-    { task: 'Site inspection - Tech Corp', project: 'Smart Office Building', due: 'Today', priority: 'high' },
-    { task: 'Budget review meeting', project: 'Warehouse Automation', due: 'Tomorrow', priority: 'high' },
-    { task: 'Material procurement approval', project: 'Retail Chain', due: 'Oct 25', priority: 'medium' },
-    { task: 'Final testing - Phase 1', project: 'Hospital Systems', due: 'Oct 27', priority: 'medium' },
+    { task: 'Circuit design review - Tech Corp', project: 'IoT Sensor Network', due: 'Today', priority: 'high' },
+    { task: 'Component sourcing meeting', project: 'Industrial Control System', due: 'Tomorrow', priority: 'high' },
+    { task: 'Firmware testing approval', project: 'Smart Grid Controller', due: 'Oct 25', priority: 'medium' },
+    { task: 'Compliance testing - Phase 1', project: 'Medical Device Interface', due: 'Oct 27', priority: 'medium' },
   ];
+
+  // Navigation handlers
+  const handleNewProject = () => {
+    router.push('/project/projects');
+  };
+
+  const handleAddTask = () => {
+    router.push('/project/tasks');
+  };
+
+  const handleViewTimeline = () => {
+    router.push('/project/timeline');
+  };
 
   return (
     <div className="space-y-6">
       <div className="bg-gradient-to-r from-purple-600 to-purple-700 rounded-xl p-6 shadow-lg">
-        <h1 className="text-3xl font-bold text-white">Project Overview</h1>
-        <p className="text-purple-100 mt-1 text-lg">Manage and track all your projects</p>
+        <h1 className="text-3xl font-bold text-white">Product Development Dashboard</h1>
+        <p className="text-purple-100 mt-1 text-lg">Manage and track all your electronic products</p>
       </div>
 
       {/* Metrics Grid */}
@@ -123,9 +140,9 @@ export default function ProjectDashboard() {
         {/* Active Projects */}
         <Card className="shadow-lg">
           <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-t-lg">
-            <CardTitle className="text-xl text-gray-900">Active Projects</CardTitle>
+            <CardTitle className="text-xl text-gray-900">Active Products</CardTitle>
             <CardDescription className="text-gray-600 font-medium">
-              Current project status and progress
+              Current product development status and progress
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-6">
@@ -164,7 +181,7 @@ export default function ProjectDashboard() {
                   </div>
                   <div className="flex items-center justify-between mt-3 text-xs text-gray-600">
                     <span>Due: <span className="font-semibold">{project.deadline}</span></span>
-                    <span className="font-semibold text-gray-900">{project.budget}</span>
+                    <span className="font-semibold text-gray-900">{formatAmount(project.budget)}</span>
                   </div>
                 </div>
               ))}
@@ -175,9 +192,9 @@ export default function ProjectDashboard() {
         {/* Upcoming Tasks */}
         <Card className="shadow-lg">
           <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-lg">
-            <CardTitle className="text-xl text-gray-900">Upcoming Tasks</CardTitle>
+            <CardTitle className="text-xl text-gray-900">Development Tasks</CardTitle>
             <CardDescription className="text-gray-600 font-medium">
-              Tasks requiring attention
+              Engineering tasks requiring attention
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-6">
@@ -212,42 +229,51 @@ export default function ProjectDashboard() {
         <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-t-lg">
           <CardTitle className="text-xl text-gray-900">Quick Actions</CardTitle>
           <CardDescription className="text-gray-600 font-medium">
-            Common project management tasks
+            Common product development tasks
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <button className="p-5 border-2 border-gray-200 rounded-xl hover:bg-gradient-to-br hover:from-purple-50 hover:to-pink-50 hover:border-purple-300 text-left transition-all duration-200 group shadow-md hover:shadow-xl">
+            <button 
+              className="p-5 border-2 border-gray-200 rounded-xl hover:bg-gradient-to-br hover:from-purple-50 hover:to-pink-50 hover:border-purple-300 text-left transition-all duration-200 group shadow-md hover:shadow-xl"
+              onClick={handleNewProject}
+            >
               <div className="flex items-center space-x-3 mb-2">
                 <div className="p-2 bg-purple-100 rounded-lg group-hover:bg-purple-200 transition-colors">
                   <Briefcase className="h-5 w-5 text-purple-600" />
                 </div>
-                <h3 className="font-bold text-gray-900 text-lg">New Project</h3>
+                <h3 className="font-bold text-gray-900 text-lg">New Product</h3>
               </div>
               <p className="text-sm text-gray-600 font-medium">
-                Create new project
+                Start new product development
               </p>
             </button>
-            <button className="p-5 border-2 border-gray-200 rounded-xl hover:bg-gradient-to-br hover:from-blue-50 hover:to-indigo-50 hover:border-blue-300 text-left transition-all duration-200 group shadow-md hover:shadow-xl">
+            <button 
+              className="p-5 border-2 border-gray-200 rounded-xl hover:bg-gradient-to-br hover:from-blue-50 hover:to-indigo-50 hover:border-blue-300 text-left transition-all duration-200 group shadow-md hover:shadow-xl"
+              onClick={handleAddTask}
+            >
               <div className="flex items-center space-x-3 mb-2">
                 <div className="p-2 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors">
                   <CheckCircle className="h-5 w-5 text-blue-600" />
                 </div>
-                <h3 className="font-bold text-gray-900 text-lg">Add Task</h3>
+                <h3 className="font-bold text-gray-900 text-lg">Add Engineering Task</h3>
               </div>
               <p className="text-sm text-gray-600 font-medium">
-                Create new task
+                Create development task
               </p>
             </button>
-            <button className="p-5 border-2 border-gray-200 rounded-xl hover:bg-gradient-to-br hover:from-green-50 hover:to-emerald-50 hover:border-green-300 text-left transition-all duration-200 group shadow-md hover:shadow-xl">
+            <button 
+              className="p-5 border-2 border-gray-200 rounded-xl hover:bg-gradient-to-br hover:from-green-50 hover:to-emerald-50 hover:border-green-300 text-left transition-all duration-200 group shadow-md hover:shadow-xl"
+              onClick={handleViewTimeline}
+            >
               <div className="flex items-center space-x-3 mb-2">
                 <div className="p-2 bg-green-100 rounded-lg group-hover:bg-green-200 transition-colors">
                   <Clock className="h-5 w-5 text-green-600" />
                 </div>
-                <h3 className="font-bold text-gray-900 text-lg">View Timeline</h3>
+                <h3 className="font-bold text-gray-900 text-lg">Development Timeline</h3>
               </div>
               <p className="text-sm text-gray-600 font-medium">
-                Project schedules
+                Product development schedules
               </p>
             </button>
           </div>

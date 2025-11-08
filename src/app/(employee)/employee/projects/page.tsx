@@ -1,10 +1,16 @@
-'use client';
+"use client";
 
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { FolderOpen, Users, Clock, CheckCircle, AlertTriangle, Calendar, Eye, Edit, MessageSquare } from 'lucide-react';
+import { toast } from 'sonner';
+
+import ProjectDetailsDialog from '@/components/project-details-dialog';
+import ProjectUpdatesDialog from '@/components/project-updates-dialog';
+import EditTaskDialog from '@/components/edit-task-dialog';
 
 export default function EmployeeProjectsPage() {
   const projectStats = [
@@ -42,7 +48,7 @@ export default function EmployeeProjectsPage() {
     },
   ];
 
-  const activeProjects = [
+  const [activeProjects, setActiveProjects] = useState([
     {
       id: 1,
       name: 'Mobile App Redesign',
@@ -87,9 +93,9 @@ export default function EmployeeProjectsPage() {
       priority: 'high',
       manager: 'David Kim',
     },
-  ];
+  ]);
 
-  const myTasks = [
+  const [myTasks, setMyTasks] = useState([
     {
       id: 1,
       project: 'Mobile App Redesign',
@@ -122,7 +128,7 @@ export default function EmployeeProjectsPage() {
       dueDate: '2024-12-01',
       priority: 'high',
     },
-  ];
+  ]);
 
   const upcomingMilestones = [
     {
@@ -148,7 +154,7 @@ export default function EmployeeProjectsPage() {
     },
   ];
 
-  const projectUpdates = [
+  const [projectUpdates, setProjectUpdates] = useState([
     {
       id: 1,
       project: 'Mobile App Redesign',
@@ -173,7 +179,11 @@ export default function EmployeeProjectsPage() {
       timestamp: '2024-11-29 16:45',
       type: 'change',
     },
-  ];
+  ]);
+
+  const handleTaskSave = (updatedTask: typeof myTasks[number]) => {
+    setMyTasks((prev) => prev.map((t) => (t.id === updatedTask.id ? updatedTask : t)));
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -306,14 +316,18 @@ export default function EmployeeProjectsPage() {
                     </div>
                   </div>
                   <div className="flex justify-end mt-3 space-x-2">
-                    <Button variant="outline" size="sm" className="text-red-600 border-red-300 hover:bg-red-50">
-                      <Eye className="h-4 w-4 mr-1" />
-                      View Details
-                    </Button>
-                    <Button variant="outline" size="sm" className="text-red-600 border-red-300 hover:bg-red-50">
-                      <MessageSquare className="h-4 w-4 mr-1" />
-                      Updates
-                    </Button>
+                    <ProjectDetailsDialog project={project}>
+                      <Button variant="outline" size="sm" className="text-red-600 border-red-300 hover:bg-red-50">
+                        <Eye className="h-4 w-4 mr-1" />
+                        View Details
+                      </Button>
+                    </ProjectDetailsDialog>
+                    <ProjectUpdatesDialog updates={projectUpdates.filter((u) => u.project === project.name)}>
+                      <Button variant="outline" size="sm" className="text-red-600 border-red-300 hover:bg-red-50">
+                        <MessageSquare className="h-4 w-4 mr-1" />
+                        Updates
+                      </Button>
+                    </ProjectUpdatesDialog>
                   </div>
                 </div>
               ))}
@@ -351,10 +365,12 @@ export default function EmployeeProjectsPage() {
                   <div className="flex items-center space-x-3">
                     {getPriorityBadge(task.priority)}
                     {getStatusBadge(task.status)}
-                    <Button variant="outline" size="sm" className="text-red-600 border-red-300 hover:bg-red-50">
-                      <Edit className="h-4 w-4 mr-1" />
-                      Update
-                    </Button>
+                    <EditTaskDialog task={task} onSave={handleTaskSave}>
+                      <Button variant="outline" size="sm" className="text-red-600 border-red-300 hover:bg-red-50">
+                        <Edit className="h-4 w-4 mr-1" />
+                        Update
+                      </Button>
+                    </EditTaskDialog>
                   </div>
                 </div>
               ))}
@@ -434,10 +450,12 @@ export default function EmployeeProjectsPage() {
                       </div>
                     </div>
                   </div>
-                  <Button variant="outline" size="sm" className="text-red-600 border-red-300 hover:bg-red-50">
-                    <Eye className="h-4 w-4 mr-1" />
-                    View
-                  </Button>
+                  <ProjectUpdatesDialog updates={projectUpdates.filter((u) => u.project === update.project)}>
+                    <Button variant="outline" size="sm" className="text-red-600 border-red-300 hover:bg-red-50">
+                      <Eye className="h-4 w-4 mr-1" />
+                      View
+                    </Button>
+                  </ProjectUpdatesDialog>
                 </div>
               ))}
             </div>
@@ -455,7 +473,7 @@ export default function EmployeeProjectsPage() {
         </CardHeader>
         <CardContent className="pt-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Button className="p-5 border-2 border-cyan-200 rounded-xl hover:bg-linear-to-br hover:from-cyan-50 hover:to-blue-50 hover:border-cyan-300 text-left transition-all duration-200 group shadow-md hover:shadow-xl">
+            <Button onClick={() => toast('Opening project list (mock)')} className="p-5 border-2 border-cyan-200 rounded-xl hover:bg-linear-to-br hover:from-cyan-50 hover:to-blue-50 hover:border-cyan-300 text-left transition-all duration-200 group shadow-md hover:shadow-xl">
               <div className="flex items-center space-x-3 mb-2">
                 <div className="p-2 bg-cyan-100 rounded-lg group-hover:bg-cyan-200 transition-colors">
                   <FolderOpen className="h-5 w-5 text-cyan-600" />
@@ -466,7 +484,7 @@ export default function EmployeeProjectsPage() {
                 Browse complete project portfolio
               </p>
             </Button>
-            <Button className="p-5 border-2 border-green-200 rounded-xl hover:bg-linear-to-br hover:from-green-50 hover:to-emerald-50 hover:border-green-300 text-left transition-all duration-200 group shadow-md hover:shadow-xl">
+            <Button onClick={() => toast('Open task manager (mock)')} className="p-5 border-2 border-green-200 rounded-xl hover:bg-linear-to-br hover:from-green-50 hover:to-emerald-50 hover:border-green-300 text-left transition-all duration-200 group shadow-md hover:shadow-xl">
               <div className="flex items-center space-x-3 mb-2">
                 <div className="p-2 bg-green-100 rounded-lg group-hover:bg-green-200 transition-colors">
                   <CheckCircle className="h-5 w-5 text-green-600" />
@@ -477,7 +495,7 @@ export default function EmployeeProjectsPage() {
                 Mark tasks complete and update progress
               </p>
             </Button>
-            <Button className="p-5 border-2 border-purple-200 rounded-xl hover:bg-linear-to-br hover:from-purple-50 hover:to-pink-50 hover:border-purple-300 text-left transition-all duration-200 group shadow-md hover:shadow-xl">
+            <Button onClick={() => toast('Open team chat (mock)')} className="p-5 border-2 border-purple-200 rounded-xl hover:bg-linear-to-br hover:from-purple-50 hover:to-pink-50 hover:border-purple-300 text-left transition-all duration-200 group shadow-md hover:shadow-xl">
               <div className="flex items-center space-x-3 mb-2">
                 <div className="p-2 bg-purple-100 rounded-lg group-hover:bg-purple-200 transition-colors">
                   <MessageSquare className="h-5 w-5 text-purple-600" />

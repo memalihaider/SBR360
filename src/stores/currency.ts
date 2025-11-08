@@ -3,7 +3,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export type Currency = 'USD' | 'AED';
+export type Currency = 'USD' | 'AED' | 'EUR' | 'GBP' | 'INR' | 'CAD' | 'AUD' | 'JPY' | 'CHF' | 'CNY';
 
 interface CurrencyState {
   currency: Currency;
@@ -13,16 +13,35 @@ interface CurrencyState {
   convertCurrency: (amount: number, from: Currency, to: Currency) => number;
 }
 
-// Exchange rates (as of current date - these should be updated with real rates)
+// Exchange rates relative to USD (as of November 2025 - these should be updated regularly)
 const EXCHANGE_RATES = {
-  USD_TO_AED: 3.67, // 1 USD = 3.67 AED
-  AED_TO_USD: 1 / 3.67, // 1 AED = 0.272 USD
+  // Base currency is USD
+  USD: 1.0,
+  
+  // Middle East
+  AED: 3.67,
+  
+  // Europe
+  EUR: 0.85,
+  GBP: 0.73,
+  CHF: 0.83,
+  
+  // Asia
+  INR: 84.5,
+  JPY: 152.0,
+  CNY: 7.25,
+  
+  // Americas
+  CAD: 1.38,
+  
+  // Oceania
+  AUD: 1.52,
 };
 
 export const useCurrencyStore = create<CurrencyState>()(
   persist(
     (set, get) => ({
-      currency: 'USD',
+      currency: 'AED',
 
       setCurrency: (currency: Currency) => {
         set({ currency });
@@ -54,13 +73,11 @@ export const useCurrencyStore = create<CurrencyState>()(
       convertCurrency: (amount: number, from: Currency, to: Currency) => {
         if (from === to) return amount;
 
-        if (from === 'USD' && to === 'AED') {
-          return amount * EXCHANGE_RATES.USD_TO_AED;
-        } else if (from === 'AED' && to === 'USD') {
-          return amount * EXCHANGE_RATES.AED_TO_USD;
-        }
+        // Convert to USD first, then to target currency
+        const amountInUSD = from === 'USD' ? amount : amount / EXCHANGE_RATES[from];
+        const amountInTarget = to === 'USD' ? amountInUSD : amountInUSD * EXCHANGE_RATES[to];
 
-        return amount;
+        return amountInTarget;
       },
     }),
     {

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,25 +27,30 @@ interface Task {
 }
 
 export default function TasksPage() {
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'todo' | 'in_progress' | 'review' | 'done'>('all');
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
 
-  // Mock tasks data
+  // Mock tasks data - properly assigned to team members
   const tasks: Task[] = mockData.projects.flatMap((project, projIdx) => 
     Array.from({ length: Math.floor(Math.random() * 5) + 2 }, (_, taskIdx) => {
       const statuses: ('todo' | 'in_progress' | 'review' | 'done')[] = ['todo', 'in_progress', 'review', 'done'];
       const priorities: ('low' | 'medium' | 'high' | 'critical')[] = ['low', 'medium', 'high', 'critical'];
       const status = statuses[Math.floor(Math.random() * statuses.length)];
       
+      // Assign task to a random team member from the project
+      const assignedMemberId = project.teamMembers[Math.floor(Math.random() * project.teamMembers.length)];
+      const assignedEmployee = mockData.employees.find(e => e.id === assignedMemberId);
+      
       return {
         id: `TASK-${projIdx}-${taskIdx}`,
-        title: `Task ${taskIdx + 1} for ${project.name}`,
-        description: `Complete milestone deliverable for project ${project.name}`,
+        title: `Design ${['Circuit', 'Firmware', 'Testing', 'Documentation', 'Integration'][Math.floor(Math.random() * 5)]} for ${project.name}`,
+        description: `Complete ${['schematic design', 'code development', 'validation testing', 'technical documentation', 'system integration'][Math.floor(Math.random() * 5)]} for project ${project.name}`,
         projectId: project.id,
         projectName: project.name,
-        assignedTo: project.teamMembers[0] || 'unassigned',
-        assigneeName: 'Team Member',
+        assignedTo: assignedMemberId || 'unassigned',
+        assigneeName: assignedEmployee ? `${assignedEmployee.firstName} ${assignedEmployee.lastName}` : 'Unassigned',
         status,
         priority: priorities[Math.floor(Math.random() * priorities.length)],
         dueDate: new Date(Date.now() + Math.random() * 30 * 24 * 60 * 60 * 1000),
@@ -79,6 +85,18 @@ export default function TasksPage() {
   const inProgressTasks = tasks.filter(t => t.status === 'in_progress').length;
   const reviewTasks = tasks.filter(t => t.status === 'review').length;
   const doneTasks = tasks.filter(t => t.status === 'done').length;
+
+  const handleNewTask = () => {
+    router.push('/project/tasks/new');
+  };
+
+  const handleViewTask = (taskId: string) => {
+    router.push(`/project/tasks/${taskId}`);
+  };
+
+  const handleEditTask = (taskId: string) => {
+    router.push(`/project/tasks/${taskId}`);
+  };
 
   const getStatusBadge = (status: string) => {
     const badges: Record<string, string> = {
@@ -170,7 +188,7 @@ export default function TasksPage() {
               Kanban
             </Button>
           </div>
-          <Button className="bg-purple-600 hover:bg-purple-700 text-white">
+          <Button className="bg-purple-600 hover:bg-purple-700 text-white" onClick={handleNewTask}>
             <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
@@ -337,8 +355,8 @@ export default function TasksPage() {
                       </td>
                       <td className="py-3 px-4">
                         <div className="flex items-center justify-center gap-2">
-                          <Button size="sm" variant="outline">View</Button>
-                          <Button size="sm" variant="outline">Edit</Button>
+                          <Button size="sm" variant="outline" onClick={() => handleViewTask(task.id)}>View</Button>
+                          <Button size="sm" variant="outline" onClick={() => handleEditTask(task.id)}>Edit</Button>
                         </div>
                       </td>
                     </tr>

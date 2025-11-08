@@ -1,74 +1,22 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuthStore } from '@/stores/auth';
-import mockData from '@/lib/mock-data';
-
-interface Invoice {
-  id: string;
-  invoiceNumber: string;
-  projectName: string;
-  issueDate: Date;
-  dueDate: Date;
-  amount: number;
-  tax: number;
-  totalAmount: number;
-  status: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled';
-  paidDate?: Date;
-  paymentMethod?: string;
-  items: {
-    description: string;
-    quantity: number;
-    unitPrice: number;
-    amount: number;
-  }[];
-}
+import ClientInvoiceDetailsDialog from '@/components/client-invoice-details-dialog';
+import PayInvoiceDialog from '@/components/pay-invoice-dialog';
+import { useInvoicesStore } from '@/stores/invoices';
+import { Invoice } from '@/types';
 
 export default function ClientInvoicesPage() {
   const { user } = useAuthStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'sent' | 'paid' | 'overdue'>('all');
 
-  // Generate mock invoices from projects
-  const invoices: Invoice[] = mockData.projects.slice(0, 8).map((project, idx) => {
-    const statuses: ('sent' | 'paid' | 'overdue')[] = ['sent', 'paid', 'overdue'];
-    const status = statuses[Math.floor(Math.random() * statuses.length)];
-    const amount = project.budgetAmount * 0.3;
-    const tax = amount * 0.1;
-    const totalAmount = amount + tax;
-
-    return {
-      id: `INV-${idx + 1}`,
-      invoiceNumber: `INV-2025-${String(idx + 1).padStart(4, '0')}`,
-      projectName: project.name,
-      issueDate: new Date(project.startDate),
-      dueDate: new Date(new Date(project.startDate).getTime() + 30 * 24 * 60 * 60 * 1000),
-      amount,
-      tax,
-      totalAmount,
-      status,
-      paidDate: status === 'paid' ? new Date() : undefined,
-      paymentMethod: status === 'paid' ? 'Bank Transfer' : undefined,
-      items: [
-        {
-          description: `${project.name} - Milestone 1`,
-          quantity: 1,
-          unitPrice: amount * 0.5,
-          amount: amount * 0.5,
-        },
-        {
-          description: `${project.name} - Milestone 2`,
-          quantity: 1,
-          unitPrice: amount * 0.5,
-          amount: amount * 0.5,
-        },
-      ],
-    };
-  });
+  const { invoices, updateInvoice } = useInvoicesStore();
 
   const getFilteredInvoices = () => {
     let filtered = invoices;
@@ -80,7 +28,7 @@ export default function ClientInvoicesPage() {
     if (searchTerm) {
       filtered = filtered.filter(i =>
         i.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        i.projectName.toLowerCase().includes(searchTerm.toLowerCase())
+        (i.projectName && i.projectName.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
 
@@ -102,6 +50,23 @@ export default function ClientInvoicesPage() {
       cancelled: 'bg-orange-100 text-orange-800',
     };
     return badges[status] || 'bg-gray-100 text-gray-800';
+  };
+
+  const handleDownload = (invoice: Invoice) => {
+    const content = `Invoice: ${invoice.invoiceNumber}\nProject: ${invoice.projectName || 'No project'}\nAmount: $${invoice.totalAmount.toLocaleString()}`;
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${invoice.invoiceNumber}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const handlePay = (id: string, method: string, receipt?: string) => {
+    updateInvoice(id, { status: 'paid', paidDate: new Date() });
   };
 
   return (
@@ -226,7 +191,7 @@ export default function ClientInvoicesPage() {
                       {invoice.status.toUpperCase()}
                     </Badge>
                   </div>
-                  <p className="text-sm text-gray-600">{invoice.projectName}</p>
+                  <p className="text-sm text-gray-600">{invoice.projectName || 'No project'}</p>
                 </div>
                 <div className="text-right">
                   <p className="text-2xl font-bold text-gray-900">${invoice.totalAmount.toLocaleString()}</p>
@@ -249,11 +214,11 @@ export default function ClientInvoicesPage() {
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">Subtotal</p>
-                  <p className="text-sm font-medium text-gray-900">${invoice.amount.toLocaleString()}</p>
+                  <p className="text-sm font-medium text-gray-900">${invoice.subtotal.toLocaleString()}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">Tax (10%)</p>
-                  <p className="text-sm font-medium text-gray-900">${invoice.tax.toLocaleString()}</p>
+                  <p className="text-xs text-gray-500">Tax</p>
+                  <p className="text-sm font-medium text-gray-900">${invoice.totalTaxAmount.toLocaleString()}</p>
                 </div>
               </div>
 
@@ -264,23 +229,30 @@ export default function ClientInvoicesPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     <span className="text-green-800 font-medium">
-                      Paid on {invoice.paidDate.toLocaleDateString()} via {invoice.paymentMethod}
+                      Paid on {invoice.paidDate.toLocaleDateString()}
                     </span>
                   </div>
                 </div>
               )}
 
               <div className="flex gap-2">
-                <button className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-sm font-medium transition-colors">
-                  View Details
-                </button>
-                <button className="px-4 py-2 border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-md text-sm font-medium transition-colors">
+                <ClientInvoiceDetailsDialog invoice={invoice}>
+                  <button className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-sm font-medium transition-colors">
+                    View Details
+                  </button>
+                </ClientInvoiceDetailsDialog>
+                <button
+                  className="px-4 py-2 border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-md text-sm font-medium transition-colors"
+                  onClick={() => handleDownload(invoice)}
+                >
                   Download PDF
                 </button>
                 {invoice.status === 'sent' && (
-                  <button className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md text-sm font-medium transition-colors">
-                    Pay Now
-                  </button>
+                  <PayInvoiceDialog invoiceId={invoice.id} onPay={handlePay}>
+                    <button className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md text-sm font-medium transition-colors">
+                      Pay Now
+                    </button>
+                  </PayInvoiceDialog>
                 )}
               </div>
             </CardContent>

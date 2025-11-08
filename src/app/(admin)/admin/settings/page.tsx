@@ -33,7 +33,7 @@ export default function AdminSettingsPage() {
     companyName: 'Largify 360ERP',
     timezone: 'UTC-05:00 (EST)',
     dateFormat: 'MM/DD/YYYY',
-    currency: 'USD ($)',
+    currency: 'AED (د.إ)',
   });
 
   const [securitySettings, setSecuritySettings] = useState({
@@ -156,7 +156,7 @@ export default function AdminSettingsPage() {
               companyName: 'Largify 360ERP',
               timezone: 'UTC-05:00 (EST)',
               dateFormat: 'MM/DD/YYYY',
-              currency: 'USD ($)',
+              currency: 'AED (د.إ)',
             });
             setSecuritySettings({
               twoFactorAuth: true,
@@ -794,6 +794,7 @@ export default function AdminSettingsPage() {
                         )}
                         {setting.key === 'currency' && (
                           <>
+                            <SelectItem value="AED (د.إ)">AED (د.إ)</SelectItem>
                             <SelectItem value="USD ($)">USD ($)</SelectItem>
                             <SelectItem value="EUR (€)">EUR (€)</SelectItem>
                             <SelectItem value="GBP (£)">GBP (£)</SelectItem>

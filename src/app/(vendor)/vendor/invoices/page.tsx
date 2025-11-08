@@ -6,13 +6,27 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import mockData from '@/lib/mock-data';
+import { useCurrencyStore } from '@/stores/currency';
+import { CreateInvoiceModal } from '@/components/create-invoice-modal';
+import { ViewInvoiceModal } from '@/components/view-invoice-modal';
+import { SubmitInvoiceModal } from '@/components/submit-invoice-modal';
+import { ReceiptModal } from '@/components/receipt-modal';
+import { toast } from 'sonner';
 
 export default function VendorInvoicesPage() {
+  const { formatAmount } = useCurrencyStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
-  // Mock vendor invoices based on projects
-  const invoices = mockData.projects.slice(0, 15).map((project, index) => ({
+  // Modal state
+  const [showCreateInvoiceModal, setShowCreateInvoiceModal] = useState(false);
+  const [showViewInvoiceModal, setShowViewInvoiceModal] = useState(false);
+  const [showSubmitInvoiceModal, setShowSubmitInvoiceModal] = useState(false);
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
+
+  // Invoices state
+  const [invoices, setInvoices] = useState(() => mockData.projects.slice(0, 15).map((project, index) => ({
     id: `INV-${2000 + index}`,
     invoiceNumber: `VND-INV-${2000 + index}`,
     purchaseOrder: `PO-${1000 + index}`,
@@ -23,7 +37,7 @@ export default function VendorInvoicesPage() {
     paymentMethod: ['Bank Transfer', 'Check', 'Wire Transfer'][Math.floor(Math.random() * 3)],
     status: ['draft', 'sent', 'pending', 'paid', 'overdue'][Math.floor(Math.random() * 5)] as string,
     notes: index % 4 === 0 ? 'Early payment discount applied' : '',
-  }));
+  })));
 
   const filteredInvoices = invoices.filter(invoice => {
     const matchesSearch = invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -36,13 +50,13 @@ export default function VendorInvoicesPage() {
   const stats = [
     { 
       label: 'Total Invoiced', 
-      value: `$${invoices.reduce((sum, inv) => sum + inv.amount, 0).toLocaleString()}`, 
+      value: formatAmount(invoices.reduce((sum, inv) => sum + inv.amount, 0)), 
       color: 'bg-pink-500', 
       icon: '💰' 
     },
     { 
       label: 'Paid', 
-      value: `$${invoices.filter(i => i.status === 'paid').reduce((sum, inv) => sum + inv.amount, 0).toLocaleString()}`, 
+      value: formatAmount(invoices.filter(i => i.status === 'paid').reduce((sum, inv) => sum + inv.amount, 0)), 
       color: 'bg-green-500', 
       icon: '✅' 
     },
@@ -72,6 +86,48 @@ export default function VendorInvoicesPage() {
     }
   };
 
+  // Modal handlers
+  const handleCreateInvoice = () => {
+    setShowCreateInvoiceModal(true);
+  };
+
+  const handleViewInvoice = (invoice: any) => {
+    setSelectedInvoice(invoice);
+    setShowViewInvoiceModal(true);
+  };
+
+  const handleSubmitInvoice = (invoice: any) => {
+    setSelectedInvoice(invoice);
+    setShowSubmitInvoiceModal(true);
+  };
+
+  const handleViewReceipt = (invoice: any) => {
+    setSelectedInvoice(invoice);
+    setShowReceiptModal(true);
+  };
+
+  const handleInvoiceCreated = (newInvoice: any) => {
+    setInvoices(prev => [newInvoice, ...prev]);
+    toast.success('Invoice created successfully');
+  };
+
+  const handleInvoiceSubmitted = (invoiceId: string) => {
+    setInvoices(prev => prev.map(inv =>
+      inv.id === invoiceId
+        ? { ...inv, status: 'sent' as const }
+        : inv
+    ));
+    toast.success('Invoice submitted successfully');
+  };
+
+  const handleCloseModals = () => {
+    setShowCreateInvoiceModal(false);
+    setShowViewInvoiceModal(false);
+    setShowSubmitInvoiceModal(false);
+    setShowReceiptModal(false);
+    setSelectedInvoice(null);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -80,7 +136,7 @@ export default function VendorInvoicesPage() {
           <h1 className="text-3xl font-bold text-gray-900">Invoices & Payments</h1>
           <p className="text-gray-600 mt-1">Track your submitted invoices and payment status</p>
         </div>
-        <Button className="bg-pink-600 hover:bg-pink-700 text-white">
+        <Button className="bg-pink-600 hover:bg-pink-700 text-white" onClick={handleCreateInvoice}>
           <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
           </svg>
@@ -179,7 +235,7 @@ export default function VendorInvoicesPage() {
                       <p className="text-sm text-gray-600">{invoice.dueDate}</p>
                     </td>
                     <td className="px-4 py-4">
-                      <p className="text-lg font-bold text-pink-600">${invoice.amount.toLocaleString()}</p>
+                      <p className="text-lg font-bold text-pink-600">{formatAmount(invoice.amount)}</p>
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex items-center text-sm text-gray-700">
@@ -196,16 +252,16 @@ export default function VendorInvoicesPage() {
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex gap-2">
-                        <Button size="sm" variant="outline" className="text-pink-600 border-pink-600 hover:bg-pink-50">
+                        <Button size="sm" variant="outline" className="text-pink-600 border-pink-600 hover:bg-pink-50" onClick={() => handleViewInvoice(invoice)}>
                           View
                         </Button>
                         {invoice.status === 'draft' && (
-                          <Button size="sm" className="bg-pink-600 hover:bg-pink-700 text-white">
+                          <Button size="sm" className="bg-pink-600 hover:bg-pink-700 text-white" onClick={() => handleSubmitInvoice(invoice)}>
                             Submit
                           </Button>
                         )}
                         {invoice.status === 'paid' && (
-                          <Button size="sm" variant="outline" className="text-green-600 border-green-600 hover:bg-green-50">
+                          <Button size="sm" variant="outline" className="text-green-600 border-green-600 hover:bg-green-50" onClick={() => handleViewReceipt(invoice)}>
                             Receipt
                           </Button>
                         )}
@@ -230,6 +286,32 @@ export default function VendorInvoicesPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Modals */}
+      <CreateInvoiceModal
+        isOpen={showCreateInvoiceModal}
+        onClose={handleCloseModals}
+        onInvoiceCreated={handleInvoiceCreated}
+      />
+
+      <ViewInvoiceModal
+        isOpen={showViewInvoiceModal}
+        onClose={handleCloseModals}
+        invoice={selectedInvoice}
+      />
+
+      <SubmitInvoiceModal
+        isOpen={showSubmitInvoiceModal}
+        onClose={handleCloseModals}
+        invoice={selectedInvoice}
+        onInvoiceSubmitted={handleInvoiceSubmitted}
+      />
+
+      <ReceiptModal
+        isOpen={showReceiptModal}
+        onClose={handleCloseModals}
+        invoice={selectedInvoice}
+      />
     </div>
   );
 }

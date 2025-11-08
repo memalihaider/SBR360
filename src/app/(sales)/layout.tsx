@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useAuthStore } from '@/stores/auth';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { CurrencySwitcher } from '@/components/currency-switcher';
+import { SalesCurrencySwitcher } from '@/components/sales-currency-switcher';
 
 export default function SalesLayout({
   children,
@@ -61,24 +61,24 @@ export default function SalesLayout({
     <div className="min-h-screen bg-gray-50">
       <div className="flex h-screen">
         {/* Sidebar */}
-        <div className="w-64 bg-linear-to-b from-green-900 to-green-800 text-white shadow-xl">
-          <div className="p-6 border-b border-green-700">
+        <div className="w-64 bg-linear-to-b from-blue-900 to-blue-800 text-white shadow-xl">
+          <div className="p-6 border-b border-blue-700">
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
-                <span className="text-green-900 text-xl font-bold">S</span>
+                <span className="text-blue-900 text-xl font-bold">S</span>
               </div>
               <div>
                 <h1 className="text-lg font-bold">Sales Portal</h1>
-                <p className="text-green-200 text-xs">CRM & Pipeline</p>
+                <p className="text-blue-200 text-xs">CRM & Pipeline</p>
               </div>
             </div>
           </div>
           
-          <nav className="mt-6 px-4">
-            <div className="space-y-2">
+          <nav className="mt-6 px-4 overflow-y-auto max-h-[calc(100vh-200px)]">
+            <div className="space-y-1">
               <Link
                 href="/sales/dashboard"
-                className="flex items-center px-4 py-3 text-sm font-medium rounded-lg hover:bg-green-800 transition-all duration-200 group"
+                className="flex items-center px-4 py-3 text-sm font-medium rounded-lg hover:bg-blue-800 transition-all duration-200 group"
               >
                 <svg className="w-5 h-5 mr-3 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -87,7 +87,7 @@ export default function SalesLayout({
               </Link>
               <Link
                 href="/sales/leads"
-                className="flex items-center px-4 py-3 text-sm font-medium rounded-lg hover:bg-green-800 transition-all duration-200 group"
+                className="flex items-center px-4 py-3 text-sm font-medium rounded-lg hover:bg-blue-800 transition-all duration-200 group"
               >
                 <svg className="w-5 h-5 mr-3 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -96,7 +96,7 @@ export default function SalesLayout({
               </Link>
               <Link
                 href="/sales/customers"
-                className="flex items-center px-4 py-3 text-sm font-medium rounded-lg hover:bg-green-800 transition-all duration-200 group"
+                className="flex items-center px-4 py-3 text-sm font-medium rounded-lg hover:bg-blue-800 transition-all duration-200 group"
               >
                 <svg className="w-5 h-5 mr-3 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
@@ -105,7 +105,7 @@ export default function SalesLayout({
               </Link>
               <Link
                 href="/sales/quotations"
-                className="flex items-center px-4 py-3 text-sm font-medium rounded-lg hover:bg-green-800 transition-all duration-200 group"
+                className="flex items-center px-4 py-3 text-sm font-medium rounded-lg hover:bg-blue-800 transition-all duration-200 group"
               >
                 <svg className="w-5 h-5 mr-3 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -114,7 +114,7 @@ export default function SalesLayout({
               </Link>
               <Link
                 href="/sales/pipeline"
-                className="flex items-center px-4 py-3 text-sm font-medium rounded-lg hover:bg-green-800 transition-all duration-200 group"
+                className="flex items-center px-4 py-3 text-sm font-medium rounded-lg hover:bg-blue-800 transition-all duration-200 group"
               >
                 <svg className="w-5 h-5 mr-3 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
@@ -134,7 +134,7 @@ export default function SalesLayout({
                 Sales Management
               </h2>
               <div className="flex items-center space-x-4">
-                <CurrencySwitcher />
+                <SalesCurrencySwitcher />
                 <div className="text-right">
                   <p className="text-sm font-semibold text-gray-900">
                     {user.firstName} {user.lastName}
@@ -143,7 +143,7 @@ export default function SalesLayout({
                 </div>
                 <button
                   onClick={() => useAuthStore.getState().logout()}
-                  className="px-5 py-2.5 text-sm font-semibold text-white bg-linear-to-r from-green-600 to-green-700 rounded-lg hover:from-green-700 hover:to-green-800 transition-all duration-200 shadow-md hover:shadow-lg"
+                  className="px-5 py-2.5 text-sm font-semibold text-white bg-linear-to-r from-blue-600 to-blue-700 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-md hover:shadow-lg"
                 >
                   Logout
                 </button>

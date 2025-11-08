@@ -161,68 +161,85 @@ export interface Activity {
 // INVENTORY & PRODUCTS
 // =======================
 
-export type ProductCategory = 
-  | 'semiconductors'
-  | 'test_equipment'
-  | 'components'
-  | 'cables'
-  | 'tools'
-  | 'accessories';
+export type ProductCategory = string; // Now a string to support hierarchical categories
 
-export type ProductStatus = 
+export type ProductStatus =
   | 'active'
   | 'discontinued'
   | 'out_of_stock'
   | 'low_stock';
+
+export interface MainCategory {
+  id: string;
+  name: string;
+  description?: string;
+  icon?: string;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface SubCategory {
+  id: string;
+  name: string;
+  description?: string;
+  mainCategoryId: string; // Reference to MainCategory
+  icon?: string;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 export interface Product {
   id: string;
   sku: string;
   name: string;
   description: string;
-  category: ProductCategory;
+  mainCategoryId: string; // Reference to MainCategory
+  subCategoryId: string; // Reference to SubCategory
+  category: ProductCategory; // Legacy field, now represents the full path (e.g., "Electronics/Semiconductors")
   manufacturer: string;
   modelNumber?: string;
-  
+
   // Pricing
   costPrice: number;
   sellingPrice: number;
   margin: number;
-  
+
   // Inventory
   currentStock: number;
   minStockLevel: number;
   maxStockLevel: number;
   reorderPoint: number;
-  
+
   // Specifications
   specifications: Record<string, string>;
   images: string[];
   datasheet?: string;
-  
+
   // Status
   status: ProductStatus;
   isSerialTracked: boolean;
   isBatchTracked: boolean;
-  
+
   // Vendor Info
   preferredVendor: string; // Vendor ID
   alternateVendors: string[];
-  
+
   createdAt: Date;
   updatedAt: Date;
 }
 
 export interface InventoryTransaction {
   id: string;
-  type: 'purchase' | 'sale' | 'adjustment' | 'transfer';
+  type: 'purchase' | 'sale' | 'adjustment' | 'transfer' | 'return';
   productId: string;
   quantity: number;
   unitPrice: number;
   totalValue: number;
   
   // References
-  referenceType?: 'purchase_order' | 'sales_order' | 'project';
+  referenceType?: 'purchase_order' | 'sales_order' | 'project' | 'return_request';
   referenceId?: string;
   
   // Location
@@ -252,6 +269,103 @@ export interface Warehouse {
   capacity: number;
   isActive: boolean;
   createdAt: Date;
+}
+
+// =======================
+// RETURNS & PRODUCT RETURNS
+// =======================
+
+export type ReturnReason =
+  | 'defective'
+  | 'wrong_item'
+  | 'damaged'
+  | 'customer_dissatisfaction'
+  | 'expired'
+  | 'overstock'
+  | 'quality_issue'
+  | 'other';
+
+export type ReturnStatus =
+  | 'pending'
+  | 'approved'
+  | 'rejected'
+  | 'received'
+  | 'inspected'
+  | 'refunded'
+  | 'replaced'
+  | 'cancelled';
+
+export type ReturnType =
+  | 'customer_return'
+  | 'vendor_return'
+  | 'internal_return';
+
+export interface ReturnItem {
+  id: string;
+  productId: string;
+  productName: string;
+  productSku: string;
+  quantity: number;
+  unitPrice: number;
+  totalValue: number;
+  reason: ReturnReason;
+  condition: 'new' | 'used' | 'damaged' | 'defective';
+  notes?: string;
+  images?: string[];
+  serialNumbers?: string[];
+  batchNumber?: string;
+}
+
+export interface ReturnRequest {
+  id: string;
+  returnNumber: string;
+  type: ReturnType;
+  
+  // References
+  referenceType?: 'sales_order' | 'purchase_order' | 'project';
+  referenceId?: string;
+  customerId?: string; // For customer returns
+  vendorId?: string; // For vendor returns
+  
+  // Return Details
+  items: ReturnItem[];
+  totalQuantity: number;
+  totalValue: number;
+  
+  // Status & Processing
+  status: ReturnStatus;
+  priority: 'low' | 'normal' | 'high' | 'urgent';
+  
+  // Dates
+  requestedDate: Date;
+  expectedReturnDate?: Date;
+  actualReturnDate?: Date;
+  processedDate?: Date;
+  
+  // Processing Info
+  inspectedBy?: string; // User ID
+  approvedBy?: string; // User ID
+  rejectedReason?: string;
+  
+  // Financial
+  refundAmount?: number;
+  restockingFee?: number;
+  finalRefundAmount?: number;
+  
+  // Logistics
+  returnMethod: 'pickup' | 'drop_off' | 'mail';
+  trackingNumber?: string;
+  warehouseLocation?: string;
+  
+  // Notes & Comments
+  customerNotes?: string;
+  internalNotes?: string;
+  resolutionNotes?: string;
+  
+  // Audit
+  createdBy: string; // User ID
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 // =======================
@@ -293,7 +407,7 @@ export interface Vendor {
   qualityRating: number;
   
   // Categories
-  productCategories: ProductCategory[];
+  productCategories: string[]; // Now array of strings for hierarchical categories
   
   status: VendorStatus;
   isActive: boolean;
@@ -407,10 +521,190 @@ export interface Milestone {
 export interface ProjectDocument {
   id: string;
   name: string;
-  type: 'contract' | 'specification' | 'drawing' | 'report' | 'other';
+  type: 'contract' | 'specification' | 'drawing' | 'report' | 'boq' | 'other';
   url: string;
   uploadedBy: string; // User ID
   uploadedAt: Date;
+}
+
+// =======================
+// BILL OF QUANTITIES (BOQ)
+// =======================
+
+export type BOQStatus = 
+  | 'draft'
+  | 'under_review'
+  | 'approved'
+  | 'sent_to_client'
+  | 'accepted'
+  | 'rejected'
+  | 'expired';
+
+export type BOQItemType = 
+  | 'material'
+  | 'labor'
+  | 'equipment'
+  | 'subcontract'
+  | 'overhead'
+  | 'contingency';
+
+export type BOQMainCategory = 
+  | 'civil_works'
+  | 'electrical'
+  | 'mechanical'
+  | 'plumbing'
+  | 'hvac'
+  | 'fire_safety'
+  | 'security'
+  | 'finishing'
+  | 'landscaping'
+  | 'other';
+
+export type BOQSubCategory = 
+  // Civil Works
+  | 'excavation'
+  | 'foundation'
+  | 'concrete'
+  | 'masonry'
+  | 'structural_steel'
+  | 'roofing'
+  // Electrical
+  | 'wiring'
+  | 'lighting'
+  | 'switchgear'
+  | 'transformers'
+  | 'generators'
+  | 'cabling'
+  | 'earthing'
+  // Mechanical
+  | 'pumps'
+  | 'compressors'
+  | 'conveyors'
+  | 'elevators'
+  | 'cranes'
+  | 'machinery'
+  // Plumbing
+  | 'water_supply'
+  | 'drainage'
+  | 'sewage'
+  | 'fire_hydrants'
+  | 'water_tanks'
+  // HVAC
+  | 'air_conditioning'
+  | 'ventilation'
+  | 'ducting'
+  | 'chillers'
+  | 'boilers'
+  // Fire Safety
+  | 'sprinklers'
+  | 'fire_extinguishers'
+  | 'alarms'
+  | 'hydrants'
+  // Security
+  | 'cctv'
+  | 'access_control'
+  | 'intrusion_detection'
+  | 'fencing'
+  // Finishing
+  | 'painting'
+  | 'flooring'
+  | 'ceiling'
+  | 'doors_windows'
+  | 'furniture'
+  // Landscaping
+  | 'hardscaping'
+  | 'softscaping'
+  | 'irrigation'
+  // Other
+  | 'custom';
+
+export interface BOQItem {
+  id: string;
+  itemNumber: string;
+  description: string;
+  type: BOQItemType;
+  mainCategory: BOQMainCategory;
+  subCategory: BOQSubCategory;
+  category: string; // Full category path (e.g., "Electrical/Lighting")
+  unit: string; // e.g., 'sqm', 'cubic_m', 'kg', 'hours', 'each', 'meter', 'liter'
+  quantity: number;
+  unitRate: number;
+  totalAmount: number;
+  specifications?: string;
+  brand?: string;
+  model?: string;
+  manufacturer?: string;
+  qualityGrade?: 'standard' | 'premium' | 'luxury';
+  warranty?: string;
+  deliveryTime?: number; // in days
+  notes?: string;
+  referenceCode?: string; // Internal reference or catalog code
+  isAlternative?: boolean; // If this is an alternative item
+  alternativeTo?: string; // Item ID this is alternative to
+}
+
+export interface BOQSection {
+  id: string;
+  sectionNumber: string;
+  title: string;
+  description?: string;
+  items: BOQItem[];
+  subtotal: number;
+}
+
+export interface BOQ {
+  id: string;
+  boqNumber: string;
+  projectId: string;
+  projectName: string;
+  customerId: string;
+  customerName: string;
+  
+  // Status & Workflow
+  status: BOQStatus;
+  version: number;
+  
+  // Content
+  title: string;
+  description?: string;
+  sections: BOQSection[];
+  
+  // Financial Summary
+  subtotal: number;
+  discountAmount: number;
+  discountPercentage: number;
+  taxAmount: number;
+  taxPercentage: number;
+  totalAmount: number;
+  
+  // Terms & Conditions
+  validityPeriod: number; // days
+  paymentTerms: string;
+  deliveryTerms: string;
+  warrantyTerms?: string;
+  
+  // Dates
+  createdDate: Date;
+  lastModified: Date;
+  approvedDate?: Date;
+  sentDate?: Date;
+  expiryDate: Date;
+  
+  // Workflow
+  createdBy: string; // User ID
+  approvedBy?: string; // User ID
+  reviewedBy?: string[]; // User IDs
+  
+  // Conversion
+  convertedToQuotation?: string; // Quotation ID
+  convertedToProject?: string; // Project ID
+  
+  // Notes & Comments
+  internalNotes?: string;
+  clientComments?: string;
+  
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export type QuotationStatus = 
@@ -470,34 +764,103 @@ export type InvoiceStatus =
   | 'overdue'
   | 'cancelled';
 
+export interface InvoiceItem {
+  id: string;
+  productId: string;
+  productName: string;
+  productSku: string;
+  mainCategoryId: string;
+  mainCategoryName: string;
+  subCategoryId: string;
+  subCategoryName: string;
+  manufacturer: string;
+  modelNumber?: string;
+  description: string;
+  specifications?: Record<string, string>;
+  quantity: number;
+  unitPrice: number;
+  discount: number; // percentage
+  discountAmount: number;
+  taxRate: number; // percentage
+  taxAmount: number;
+  serviceCharge: number; // percentage
+  serviceChargeAmount: number;
+  totalPrice: number;
+  stockAvailable: number;
+  isStockTracked: boolean;
+  serialNumbers?: string[];
+  batchNumber?: string;
+  notes?: string;
+}
+
+export interface InvoiceTax {
+  id: string;
+  name: string;
+  rate: number; // percentage
+  amount: number;
+  type: 'vat' | 'gst' | 'sales_tax' | 'service_tax' | 'custom';
+  isInclusive: boolean;
+}
+
+export interface InvoiceServiceCharge {
+  id: string;
+  name: string;
+  rate: number; // percentage
+  amount: number;
+  type: 'delivery' | 'installation' | 'maintenance' | 'warranty' | 'custom';
+  description?: string;
+}
+
 export interface Invoice {
   id: string;
   invoiceNumber: string;
   customerId: string;
+  customerName: string;
   projectId?: string;
+  projectName?: string;
   status: InvoiceStatus;
   
-  // Items
-  items: Array<{
-    description: string;
-    quantity: number;
-    unitPrice: number;
-    totalPrice: number;
-  }>;
+  // Items with detailed product information
+  items: InvoiceItem[];
   
-  // Amounts
+  // Financial breakdown
   subtotal: number;
-  taxAmount: number;
+  discountAmount: number;
+  discountPercentage: number;
+  taxes: InvoiceTax[];
+  totalTaxAmount: number;
+  serviceCharges: InvoiceServiceCharge[];
+  totalServiceChargeAmount: number;
   totalAmount: number;
   paidAmount: number;
   remainingAmount: number;
+  
+  // Stock management
+  stockReserved: boolean;
+  stockReservationId?: string;
   
   // Dates
   issueDate: Date;
   dueDate: Date;
   paidDate?: Date;
   
+  // Terms and conditions
+  paymentTerms: string;
+  deliveryTerms?: string;
+  warrantyTerms?: string;
+  notes?: string;
+  
+  // References
+  quotationId?: string;
+  purchaseOrderId?: string;
+  
+  // Workflow
   createdBy: string; // User ID
+  approvedBy?: string; // User ID
+  sentBy?: string; // User ID
+  sentAt?: Date;
+  
+  // Audit
   createdAt: Date;
   updatedAt: Date;
 }
@@ -1234,6 +1597,105 @@ export interface RecruitmentMetrics {
   offerAcceptanceRate: number;
   candidateQualityScore: number; // average rating
   sourceEffectiveness: Record<string, number>; // conversion rates by source
+}
+
+// =======================
+// ONBOARDING TYPES
+// =======================
+
+export type OnboardingStatus = 
+  | 'not-started'
+  | 'in-progress'
+  | 'almost-complete'
+  | 'completed'
+  | 'on-hold'
+  | 'cancelled';
+
+export type OnboardingTaskStatus = 
+  | 'pending'
+  | 'in-progress'
+  | 'completed'
+  | 'overdue'
+  | 'cancelled';
+
+export type OnboardingTaskPriority = 
+  | 'low'
+  | 'medium'
+  | 'high'
+  | 'urgent';
+
+export interface OnboardingTask {
+  id: string;
+  title: string;
+  description: string;
+  category: 'hr' | 'it' | 'training' | 'compliance' | 'orientation' | 'equipment' | 'other';
+  priority: OnboardingTaskPriority;
+  status: OnboardingTaskStatus;
+  assignedTo?: string; // User ID
+  dueDate: Date;
+  completedDate?: Date;
+  notes?: string;
+  isRequired: boolean;
+  order: number;
+  dependencies?: string[]; // Task IDs that must be completed first
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface OnboardingTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  department: string;
+  position?: string;
+  duration: number; // in days
+  tasks: OnboardingTask[];
+  isActive: boolean;
+  lastUsed?: Date;
+  usageCount: number;
+  createdBy: string; // User ID
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface OnboardingProcess {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  position: string;
+  department: string;
+  templateId?: string;
+  templateName?: string;
+  startDate: Date;
+  expectedEndDate: Date;
+  actualEndDate?: Date;
+  status: OnboardingStatus;
+  progress: number; // percentage 0-100
+  mentorId?: string; // User ID
+  mentorName?: string;
+  tasks: OnboardingTask[];
+  completedTasks: number;
+  totalTasks: number;
+  notes: string[];
+  feedback?: {
+    employeeRating: number; // 1-5
+    mentorRating: number; // 1-5
+    comments: string;
+    submittedAt: Date;
+  };
+  createdBy: string; // User ID
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface OnboardingMetrics {
+  totalActiveOnboardings: number;
+  completedThisMonth: number;
+  averageCompletionTime: number; // in days
+  completionRate: number; // percentage
+  overdueTasks: number;
+  upcomingTasks: number;
+  mentorUtilization: Record<string, number>; // mentor ID -> active onboardings
 }
 
 // Export all as default for easier importing

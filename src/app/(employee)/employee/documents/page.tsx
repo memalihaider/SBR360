@@ -1,9 +1,15 @@
-'use client';
+"use client";
 
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { FileText, Download, Eye, Upload, Search, Filter, Calendar, User, Paperclip } from 'lucide-react';
+import { toast } from 'sonner';
+
+import AddDocumentUrlDialog from '@/components/add-document-url-dialog';
+import DocumentDetailsDialog from '@/components/document-details-dialog';
+import DeleteConfirmationDialog from '@/components/delete-confirmation-dialog';
 
 export default function EmployeeDocumentsPage() {
   const documentStats = [
@@ -41,10 +47,11 @@ export default function EmployeeDocumentsPage() {
     },
   ];
 
-  const recentDocuments = [
+  const [recentDocuments, setRecentDocuments] = useState([
     {
       id: 1,
       name: 'Employee Handbook 2024.pdf',
+      url: 'https://example.com/employee-handbook-2024.pdf',
       type: 'HR Document',
       size: '2.4 MB',
       uploadedBy: 'HR Department',
@@ -55,6 +62,7 @@ export default function EmployeeDocumentsPage() {
     {
       id: 2,
       name: 'Q4 Performance Review.pdf',
+      url: 'https://example.com/q4-performance-review.pdf',
       type: 'Performance',
       size: '1.2 MB',
       uploadedBy: 'Manager',
@@ -65,6 +73,7 @@ export default function EmployeeDocumentsPage() {
     {
       id: 3,
       name: 'Project Proposal - Mobile App.docx',
+      url: 'https://example.com/project-proposal-mobile.docx',
       type: 'Project Document',
       size: '856 KB',
       uploadedBy: 'Project Lead',
@@ -75,6 +84,7 @@ export default function EmployeeDocumentsPage() {
     {
       id: 4,
       name: 'Training Certificate - Leadership.pdf',
+      url: 'https://example.com/training-certificate.pdf',
       type: 'Certificate',
       size: '1.8 MB',
       uploadedBy: 'Training Department',
@@ -82,9 +92,9 @@ export default function EmployeeDocumentsPage() {
       shared: true,
       category: 'Training',
     },
-  ];
+  ]);
 
-  const documentCategories = [
+  const [documentCategories, setDocumentCategories] = useState([
     {
       name: 'HR Documents',
       count: 15,
@@ -113,12 +123,13 @@ export default function EmployeeDocumentsPage() {
       color: 'bg-yellow-500',
       description: 'Your personal documents and uploads',
     },
-  ];
+  ]);
 
-  const sharedDocuments = [
+  const [sharedDocuments, setSharedDocuments] = useState([
     {
       id: 1,
       name: 'Company Benefits Guide.pdf',
+      url: 'https://example.com/company-benefits.pdf',
       sharedBy: 'HR Department',
       sharedDate: '2024-11-15',
       access: 'View Only',
@@ -127,6 +138,7 @@ export default function EmployeeDocumentsPage() {
     {
       id: 2,
       name: 'IT Security Policy.pdf',
+      url: 'https://example.com/it-security.pdf',
       sharedBy: 'IT Department',
       sharedDate: '2024-11-10',
       access: 'View Only',
@@ -135,12 +147,13 @@ export default function EmployeeDocumentsPage() {
     {
       id: 3,
       name: 'Team Meeting Notes.docx',
+      url: 'https://example.com/team-meeting-notes.docx',
       sharedBy: 'Project Manager',
       sharedDate: '2024-11-08',
       access: 'Edit',
       expires: 'Never',
     },
-  ];
+  ]);
 
   const getTypeBadge = (type: string) => {
     switch (type) {
@@ -224,10 +237,12 @@ export default function EmployeeDocumentsPage() {
                   Your latest document uploads and access
                 </CardDescription>
               </div>
-              <Button className="bg-red-600 hover:bg-red-700 text-white shadow-md">
-                <Upload className="h-4 w-4 mr-2" />
-                Upload Document
-              </Button>
+              <AddDocumentUrlDialog categories={documentCategories.map(c => c.name)} onAdd={(d) => setRecentDocuments(prev => [d, ...prev])}>
+                <Button className="bg-red-600 hover:bg-red-700 text-white shadow-md">
+                  <Upload className="h-4 w-4 mr-2" />
+                  Add Document by URL
+                </Button>
+              </AddDocumentUrlDialog>
             </div>
           </CardHeader>
           <CardContent className="pt-6">
@@ -255,14 +270,24 @@ export default function EmployeeDocumentsPage() {
                   <div className="flex items-center space-x-3">
                     {getTypeBadge(doc.type)}
                     {doc.shared && <Badge className="bg-green-100 text-green-800">Shared</Badge>}
-                    <Button variant="outline" size="sm" className="text-red-600 border-red-300 hover:bg-red-50">
-                      <Eye className="h-4 w-4 mr-1" />
-                      View
-                    </Button>
-                    <Button variant="outline" size="sm" className="text-red-600 border-red-300 hover:bg-red-50">
+                    <DocumentDetailsDialog doc={doc}>
+                      <Button variant="outline" size="sm" className="text-red-600 border-red-300 hover:bg-red-50">
+                        <Eye className="h-4 w-4 mr-1" />
+                        View
+                      </Button>
+                    </DocumentDetailsDialog>
+                    <Button onClick={() => window.open(doc.url, '_blank')} variant="outline" size="sm" className="text-red-600 border-red-300 hover:bg-red-50">
                       <Download className="h-4 w-4 mr-1" />
-                      Download
+                      Open
                     </Button>
+                    <DeleteConfirmationDialog onConfirm={() => {
+                      setRecentDocuments(prev => prev.filter(d => d.id !== doc.id));
+                      toast.success('Document removed');
+                    }}>
+                      <Button variant="outline" size="sm" className="text-gray-600 border-gray-300 hover:bg-gray-50">
+                        Delete
+                      </Button>
+                    </DeleteConfirmationDialog>
                   </div>
                 </div>
               ))}
@@ -338,10 +363,12 @@ export default function EmployeeDocumentsPage() {
                 </div>
                 <div className="flex items-center space-x-3">
                   {getAccessBadge(doc.access)}
-                  <Button variant="outline" size="sm" className="text-red-600 border-red-300 hover:bg-red-50">
-                    <Eye className="h-4 w-4 mr-1" />
-                    Open
-                  </Button>
+                  <DocumentDetailsDialog doc={{ id: doc.id, name: doc.name, url: doc.url, type: 'Shared', uploadedBy: doc.sharedBy, uploadedDate: doc.sharedDate, size: '-', shared: true, category: 'Shared' }}>
+                    <Button variant="outline" size="sm" className="text-red-600 border-red-300 hover:bg-red-50">
+                      <Eye className="h-4 w-4 mr-1" />
+                      Open
+                    </Button>
+                  </DocumentDetailsDialog>
                 </div>
               </div>
             ))}
@@ -359,6 +386,7 @@ export default function EmployeeDocumentsPage() {
         </CardHeader>
         <CardContent className="pt-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <AddDocumentUrlDialog categories={documentCategories.map(c => c.name)} onAdd={(d) => setRecentDocuments(prev => [d, ...prev])}>
             <Button className="p-5 border-2 border-red-200 rounded-xl hover:bg-linear-to-br hover:from-red-50 hover:to-pink-50 hover:border-red-300 text-left transition-all duration-200 group shadow-md hover:shadow-xl">
               <div className="flex items-center space-x-3 mb-2">
                 <div className="p-2 bg-red-100 rounded-lg group-hover:bg-red-200 transition-colors">
@@ -370,6 +398,7 @@ export default function EmployeeDocumentsPage() {
                 Add new files to your document library
               </p>
             </Button>
+            </AddDocumentUrlDialog>
             <Button className="p-5 border-2 border-green-200 rounded-xl hover:bg-linear-to-br hover:from-green-50 hover:to-emerald-50 hover:border-green-300 text-left transition-all duration-200 group shadow-md hover:shadow-xl">
               <div className="flex items-center space-x-3 mb-2">
                 <div className="p-2 bg-green-100 rounded-lg group-hover:bg-green-200 transition-colors">

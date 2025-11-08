@@ -1,9 +1,15 @@
-'use client';
+"use client";
 
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { FileText, DollarSign, Clock, CheckCircle, AlertCircle, Download, Eye, Calendar, Receipt } from 'lucide-react';
+import { toast } from 'sonner';
+
+import EmployeeInvoiceFormDialog from '@/components/employee-invoice-form-dialog';
+import InvoiceDetailsDialog from '@/components/invoice-details-dialog';
+import InvoicePaymentDialog from '@/components/invoice-payment-dialog';
 
 export default function EmployeeInvoicesPage() {
   const invoiceStats = [
@@ -41,12 +47,12 @@ export default function EmployeeInvoicesPage() {
     },
   ];
 
-  const recentInvoices = [
+  const [recentInvoices, setRecentInvoices] = useState([
     {
       id: 1,
       invoiceNumber: 'INV-2024-0124',
       description: 'Business Travel - Client Meeting',
-      amount: '$2,450.00',
+      amount: '2450.00',
       status: 'pending',
       dueDate: '2024-12-15',
       issuedDate: '2024-11-28',
@@ -56,7 +62,7 @@ export default function EmployeeInvoicesPage() {
       id: 2,
       invoiceNumber: 'INV-2024-0123',
       description: 'Software License Renewal',
-      amount: '$1,299.00',
+      amount: '1299.00',
       status: 'paid',
       dueDate: '2024-12-01',
       issuedDate: '2024-11-25',
@@ -66,7 +72,7 @@ export default function EmployeeInvoicesPage() {
       id: 3,
       invoiceNumber: 'INV-2024-0122',
       description: 'Office Supplies - Q4',
-      amount: '$345.50',
+      amount: '345.50',
       status: 'paid',
       dueDate: '2024-11-30',
       issuedDate: '2024-11-20',
@@ -76,13 +82,13 @@ export default function EmployeeInvoicesPage() {
       id: 4,
       invoiceNumber: 'INV-2024-0121',
       description: 'Training Course - Leadership Development',
-      amount: '$850.00',
+      amount: '850.00',
       status: 'overdue',
       dueDate: '2024-11-25',
       issuedDate: '2024-11-15',
       category: 'Training',
     },
-  ];
+  ]);
 
   const expenseCategories = [
     {
@@ -115,7 +121,7 @@ export default function EmployeeInvoicesPage() {
     },
   ];
 
-  const paymentHistory = [
+  const [paymentHistory, setPaymentHistory] = useState([
     {
       id: 1,
       invoiceNumber: 'INV-2024-0118',
@@ -140,7 +146,27 @@ export default function EmployeeInvoicesPage() {
       paidDate: '2024-10-28',
       method: 'Company Card',
     },
-  ];
+  ]);
+
+  const handleCreateInvoice = (invoice: any) => {
+    setRecentInvoices((prev) => [{
+      id: invoice.id,
+      invoiceNumber: invoice.invoiceNumber,
+      description: invoice.description,
+      amount: invoice.amount,
+      status: invoice.status,
+      dueDate: invoice.dueDate,
+      issuedDate: invoice.issuedDate,
+      category: invoice.category,
+    }, ...prev]);
+  };
+
+  const handleRecordPayment = (id: number, method: string) => {
+    const inv = recentInvoices.find((i) => i.id === id);
+    if (!inv) return toast.error('Invoice not found');
+    setRecentInvoices((prev) => prev.map((i) => (i.id === id ? { ...i, status: 'paid' } : i)));
+    setPaymentHistory((prev) => [{ id: Date.now(), invoiceNumber: inv.invoiceNumber, description: inv.description, amount: `$${Number(inv.amount).toFixed(2)}`, paidDate: new Date().toISOString(), method }, ...prev]);
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -219,17 +245,19 @@ export default function EmployeeInvoicesPage() {
         {/* Recent Invoices */}
         <Card className="shadow-lg">
           <CardHeader className="bg-linear-to-r from-gray-50 to-gray-100 rounded-t-lg">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
                 <CardTitle className="text-xl text-gray-900">Recent Invoices</CardTitle>
                 <CardDescription className="text-gray-600 font-medium">
                   Your latest expense reimbursements and invoices
                 </CardDescription>
               </div>
-              <Button className="bg-red-600 hover:bg-red-700 text-white shadow-md">
-                <Receipt className="h-4 w-4 mr-2" />
-                Submit Expense
-              </Button>
+              <EmployeeInvoiceFormDialog categories={expenseCategories.map(c => c.name)} onCreate={handleCreateInvoice}>
+                <Button className="bg-red-600 hover:bg-red-700 text-white shadow-md">
+                  <Receipt className="h-4 w-4 mr-2" />
+                  Submit Expense
+                </Button>
+              </EmployeeInvoiceFormDialog>
             </div>
           </CardHeader>
           <CardContent className="pt-6">
@@ -255,15 +283,24 @@ export default function EmployeeInvoicesPage() {
                     </div>
                   </div>
                   <div className="flex items-center space-x-3">
-                    <div className="text-right">
-                      <p className="text-sm font-bold text-gray-900">{invoice.amount}</p>
-                      {getCategoryBadge(invoice.category)}
-                    </div>
-                    {getStatusBadge(invoice.status)}
-                    <Button variant="outline" size="sm" className="text-red-600 border-red-300 hover:bg-red-50">
-                      <Eye className="h-4 w-4 mr-1" />
-                      View
-                    </Button>
+                      <div className="text-right">
+                        <p className="text-sm font-bold text-gray-900">${Number(invoice.amount).toLocaleString()}</p>
+                        {getCategoryBadge(invoice.category)}
+                      </div>
+                      {getStatusBadge(invoice.status)}
+                      <InvoiceDetailsDialog invoice={invoice}>
+                        <Button variant="outline" size="sm" className="text-red-600 border-red-300 hover:bg-red-50">
+                          <Eye className="h-4 w-4 mr-1" />
+                          View
+                        </Button>
+                      </InvoiceDetailsDialog>
+                      {invoice.status !== 'paid' && (
+                        <InvoicePaymentDialog invoice={invoice} onPay={handleRecordPayment}>
+                          <Button variant="outline" size="sm" className="text-red-600 border-red-300 hover:bg-red-50">
+                            Pay
+                          </Button>
+                        </InvoicePaymentDialog>
+                      )}
                   </div>
                 </div>
               ))}

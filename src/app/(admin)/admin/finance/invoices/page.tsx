@@ -13,16 +13,23 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { FileText, DollarSign, Clock, CheckCircle, XCircle, TrendingUp, Eye, Edit, Send, Plus, Calendar, User, Building } from 'lucide-react';
 import { mockData } from '@/lib/mock-data';
 import { Invoice, Customer, Project } from '@/types';
+import { useCurrencyStore } from '@/stores/currency';
+import { useInvoicesStore } from '@/stores/invoices';
 
 export default function AdminFinanceInvoicesPage() {
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const { formatAmount } = useCurrencyStore();
+  const { invoices } = useInvoicesStore();
+
+  const customers: Customer[] = mockData.customers;
+  const projects: Project[] = mockData.projects;
+
+  // State definitions
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isSendDialogOpen, setIsSendDialogOpen] = useState(false);
   const [isFormattedInvoiceOpen, setIsFormattedInvoiceOpen] = useState(false);
-  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
-
-  // Form states
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [createForm, setCreateForm] = useState({
     customerId: '',
     projectId: '',
@@ -31,7 +38,6 @@ export default function AdminFinanceInvoicesPage() {
     dueDate: '',
     notes: ''
   });
-
   const [editForm, setEditForm] = useState({
     customerId: '',
     projectId: '',
@@ -41,24 +47,11 @@ export default function AdminFinanceInvoicesPage() {
     notes: ''
   });
 
-  // Mock invoice data with proper typing
-  const invoices: Invoice[] = mockData.invoices.map(invoice => ({
-    ...invoice,
-    issueDate: new Date(invoice.issueDate),
-    dueDate: new Date(invoice.dueDate),
-    paidDate: invoice.paidDate ? new Date(invoice.paidDate) : undefined,
-    createdAt: new Date(invoice.createdAt),
-    updatedAt: new Date(invoice.updatedAt)
-  }));
-
-  const customers: Customer[] = mockData.customers;
-  const projects: Project[] = mockData.projects;
-
   const invoiceStats = [
     { title: 'Total Invoices', value: invoices.length.toString(), change: '+24', icon: FileText, color: 'blue' },
     { title: 'Paid', value: invoices.filter(i => i.status === 'paid').length.toString(), change: '+18', icon: CheckCircle, color: 'green' },
     { title: 'Pending', value: invoices.filter(i => i.status === 'sent').length.toString(), change: '+6', icon: Clock, color: 'yellow' },
-    { title: 'Total Revenue', value: '$' + (invoices.filter(i => i.status === 'paid').reduce((sum, i) => sum + i.totalAmount, 0) / 1000000).toFixed(1) + 'M', change: '+22%', icon: DollarSign, color: 'purple' },
+    { title: 'Total Revenue', value: formatAmount(invoices.filter(i => i.status === 'paid').reduce((sum, i) => sum + i.totalAmount, 0)), change: '+22%', icon: DollarSign, color: 'purple' },
   ];
 
   const getStatusBadge = (status: string) => {
@@ -84,7 +77,7 @@ export default function AdminFinanceInvoicesPage() {
       customerId: invoice.customerId,
       projectId: invoice.projectId || '',
       items: invoice.items,
-      taxAmount: invoice.taxAmount,
+      taxAmount: invoice.totalTaxAmount,
       dueDate: invoice.dueDate.toISOString().split('T')[0],
       notes: ''
     });
@@ -250,7 +243,7 @@ export default function AdminFinanceInvoicesPage() {
                       </div>
                     </div>
                     <div className="ml-6 text-right">
-                      <p className="text-2xl font-bold text-red-600">${(invoice.totalAmount / 1000).toFixed(1)}K</p>
+                      <p className="text-2xl font-bold text-red-600">{formatAmount(invoice.totalAmount)}</p>
                       <p className="text-xs text-gray-500 mt-1">Amount</p>
                       <div className="flex items-center space-x-2 mt-3">
                         <Button size="sm" variant="outline" onClick={() => handleViewInvoice(invoice)}>
@@ -385,7 +378,7 @@ export default function AdminFinanceInvoicesPage() {
                     <div className="col-span-2">
                       <Label>Total</Label>
                       <Input
-                        value={`$${(item.quantity * item.unitPrice).toFixed(2)}`}
+                        value={formatAmount(item.quantity * item.unitPrice)}
                         readOnly
                         className="bg-gray-100 border-gray-300"
                       />
@@ -416,15 +409,15 @@ export default function AdminFinanceInvoicesPage() {
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span>Subtotal:</span>
-                    <span>${calculateSubtotal(createForm.items).toFixed(2)}</span>
+                    <span>{formatAmount(calculateSubtotal(createForm.items))}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Tax:</span>
-                    <span>${createForm.taxAmount.toFixed(2)}</span>
+                    <span>{formatAmount(createForm.taxAmount)}</span>
                   </div>
                   <div className="flex justify-between font-bold text-lg border-t pt-2">
                     <span>Total:</span>
-                    <span>${calculateTotal(calculateSubtotal(createForm.items), createForm.taxAmount).toFixed(2)}</span>
+                    <span>{formatAmount(calculateTotal(calculateSubtotal(createForm.items), createForm.taxAmount))}</span>
                   </div>
                 </div>
               </div>
@@ -501,9 +494,9 @@ export default function AdminFinanceInvoicesPage() {
                     <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                       <div className="flex-1">
                         <p className="font-medium">{item.description}</p>
-                        <p className="text-sm text-gray-600">Qty: {item.quantity} × ${item.unitPrice.toFixed(2)}</p>
+                        <p className="text-sm text-gray-600">Qty: {item.quantity} × {formatAmount(item.unitPrice)}</p>
                       </div>
-                      <p className="font-semibold">${item.totalPrice.toFixed(2)}</p>
+                      <p className="font-semibold">{formatAmount(item.totalPrice)}</p>
                     </div>
                   ))}
                 </div>
@@ -514,26 +507,26 @@ export default function AdminFinanceInvoicesPage() {
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span>Subtotal:</span>
-                      <span>${selectedInvoice.subtotal.toFixed(2)}</span>
+                      <span>{formatAmount(selectedInvoice.subtotal)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Tax:</span>
-                      <span>${selectedInvoice.taxAmount.toFixed(2)}</span>
+                      <span>{formatAmount(selectedInvoice.totalTaxAmount)}</span>
                     </div>
                     <div className="flex justify-between font-bold text-lg border-t pt-2">
                       <span>Total:</span>
-                      <span>${selectedInvoice.totalAmount.toFixed(2)}</span>
+                      <span>{formatAmount(selectedInvoice.totalAmount)}</span>
                     </div>
                     {selectedInvoice.paidAmount > 0 && (
                       <>
                         <div className="flex justify-between">
                           <span>Paid:</span>
-                          <span className="text-green-600">-${selectedInvoice.paidAmount.toFixed(2)}</span>
+                          <span className="text-green-600">-{formatAmount(selectedInvoice.paidAmount)}</span>
                         </div>
                         <div className="flex justify-between font-bold text-lg border-t pt-2">
                           <span>Remaining:</span>
                           <span className={selectedInvoice.remainingAmount > 0 ? 'text-red-600' : 'text-green-600'}>
-                            ${selectedInvoice.remainingAmount.toFixed(2)}
+                            {formatAmount(selectedInvoice.remainingAmount)}
                           </span>
                         </div>
                       </>
@@ -643,7 +636,7 @@ export default function AdminFinanceInvoicesPage() {
                       <div className="col-span-2">
                         <Label>Total</Label>
                         <Input
-                          value={`$${(item.quantity * item.unitPrice).toFixed(2)}`}
+                          value={formatAmount(item.quantity * item.unitPrice)}
                           readOnly
                           className="bg-gray-100 border-gray-300"
                         />
@@ -674,15 +667,15 @@ export default function AdminFinanceInvoicesPage() {
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span>Subtotal:</span>
-                      <span>${calculateSubtotal(editForm.items).toFixed(2)}</span>
+                      <span>{formatAmount(calculateSubtotal(editForm.items))}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Tax:</span>
-                      <span>${editForm.taxAmount.toFixed(2)}</span>
+                      <span>{formatAmount(editForm.taxAmount)}</span>
                     </div>
                     <div className="flex justify-between font-bold text-lg border-t pt-2">
                       <span>Total:</span>
-                      <span>${calculateTotal(calculateSubtotal(editForm.items), editForm.taxAmount).toFixed(2)}</span>
+                      <span>{formatAmount(calculateTotal(calculateSubtotal(editForm.items), editForm.taxAmount))}</span>
                     </div>
                   </div>
                 </div>
@@ -715,7 +708,7 @@ export default function AdminFinanceInvoicesPage() {
                 <h3 className="font-semibold mb-2">Invoice Summary</h3>
                 <div className="space-y-1 text-sm">
                   <p><strong>Customer:</strong> {mockData.getCustomerById(selectedInvoice.customerId)?.companyName}</p>
-                  <p><strong>Amount:</strong> ${selectedInvoice.totalAmount.toFixed(2)}</p>
+                  <p><strong>Amount:</strong> {formatAmount(selectedInvoice.totalAmount)}</p>
                   <p><strong>Due Date:</strong> {selectedInvoice.dueDate.toLocaleDateString()}</p>
                 </div>
               </div>
@@ -736,12 +729,12 @@ export default function AdminFinanceInvoicesPage() {
                   rows={4}
                   defaultValue={`Dear ${mockData.getCustomerById(selectedInvoice.customerId)?.primaryContact.name},
 
-Please find attached invoice ${selectedInvoice.invoiceNumber} for $${selectedInvoice.totalAmount.toFixed(2)}.
+Please find attached invoice ${selectedInvoice.invoiceNumber} for ${formatAmount(selectedInvoice.totalAmount)}.
 
 Invoice Details:
 - Issue Date: ${selectedInvoice.issueDate.toLocaleDateString()}
 - Due Date: ${selectedInvoice.dueDate.toLocaleDateString()}
-- Amount: $${selectedInvoice.totalAmount.toFixed(2)}
+- Amount: ${formatAmount(selectedInvoice.totalAmount)}
 
 Please remit payment by the due date.
 
@@ -880,8 +873,8 @@ Finance Team`}
                       <tr key={index}>
                         <td className="px-4 py-3 text-sm text-gray-900">{item.description}</td>
                         <td className="px-4 py-3 text-sm text-gray-900 text-right">{item.quantity}</td>
-                        <td className="px-4 py-3 text-sm text-gray-900 text-right">${item.unitPrice.toFixed(2)}</td>
-                        <td className="px-4 py-3 text-sm font-semibold text-gray-900 text-right">${item.totalPrice.toFixed(2)}</td>
+                        <td className="px-4 py-3 text-sm text-gray-900 text-right">{formatAmount(item.unitPrice)}</td>
+                        <td className="px-4 py-3 text-sm font-semibold text-gray-900 text-right">{formatAmount(item.totalPrice)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -893,28 +886,28 @@ Finance Team`}
                 <div className="w-64 space-y-2">
                   <div className="flex justify-between text-sm">
                     <span>Subtotal:</span>
-                    <span>${selectedInvoice.subtotal.toFixed(2)}</span>
+                    <span>{formatAmount(selectedInvoice.subtotal)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span>Tax:</span>
-                    <span>${selectedInvoice.taxAmount.toFixed(2)}</span>
+                    <span>{formatAmount(selectedInvoice.totalTaxAmount)}</span>
                   </div>
                   <div className="flex justify-between font-bold text-lg border-t pt-2">
                     <span>Total:</span>
-                    <span>${selectedInvoice.totalAmount.toFixed(2)}</span>
+                    <span>{formatAmount(selectedInvoice.totalAmount)}</span>
                   </div>
                   {selectedInvoice.paidAmount > 0 && (
                     <>
                       <div className="flex justify-between text-sm text-green-600">
                         <span>Paid:</span>
-                        <span>-${selectedInvoice.paidAmount.toFixed(2)}</span>
+                        <span>-{formatAmount(selectedInvoice.paidAmount)}</span>
                       </div>
                       <div className="flex justify-between font-bold text-lg border-t pt-2">
                         <span className={selectedInvoice.remainingAmount > 0 ? 'text-red-600' : 'text-green-600'}>
                           {selectedInvoice.remainingAmount > 0 ? 'Balance Due:' : 'Paid in Full:'}
                         </span>
                         <span className={selectedInvoice.remainingAmount > 0 ? 'text-red-600' : 'text-green-600'}>
-                          ${Math.abs(selectedInvoice.remainingAmount).toFixed(2)}
+                          {formatAmount(Math.abs(selectedInvoice.remainingAmount))}
                         </span>
                       </div>
                     </>

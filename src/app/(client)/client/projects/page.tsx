@@ -1,12 +1,16 @@
-'use client';
+"use client";
 
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Briefcase, FileText, CheckCircle, AlertCircle } from 'lucide-react';
+import AddClientProjectDialog from '@/components/add-client-project-dialog';
+import ClientProjectDetailsDialog from '@/components/client-project-details-dialog';
 
 export default function ClientProjectsPage() {
-  const projects = [
+  const projectsInitial = [
     {
+      id: 1,
       name: 'Smart Office Building Installation',
       status: 'in_progress',
       progress: 85,
@@ -16,6 +20,7 @@ export default function ClientProjectsPage() {
       manager: 'John Wilson',
     },
     {
+      id: 2,
       name: 'Data Center Electrical Setup',
       status: 'completed',
       progress: 100,
@@ -25,6 +30,7 @@ export default function ClientProjectsPage() {
       manager: 'Sarah Chen',
     },
     {
+      id: 3,
       name: 'Warehouse Lighting Upgrade',
       status: 'planning',
       progress: 15,
@@ -46,6 +52,28 @@ export default function ClientProjectsPage() {
     { id: 'TKT-142', subject: 'Invoice inquiry', status: 'resolved', priority: 'low', date: '2024-10-18' },
     { id: 'TKT-139', subject: 'Site access coordination', status: 'in_progress', priority: 'high', date: '2024-10-15' },
   ];
+
+  const [projects, setProjects] = useState(projectsInitial);
+
+  const handleCreate = (project: any) => {
+    setProjects((p) => [project, ...p]);
+  };
+
+  const handleDelete = (projectId: number) => {
+    setProjects((p) => p.filter((x) => x.id !== projectId));
+    alert('Project deleted (mock).');
+  };
+
+  const handleEdit = (projectId: number) => {
+    // simple mock edit: toggle status/progress for demo
+    setProjects((p) =>
+      p.map((proj) =>
+        proj.id === projectId
+          ? { ...proj, status: proj.status === 'completed' ? 'in_progress' : 'completed', progress: proj.status === 'completed' ? 50 : 100 }
+          : proj
+      )
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -119,8 +147,8 @@ export default function ClientProjectsPage() {
         </CardHeader>
         <CardContent className="pt-6">
           <div className="space-y-4">
-            {projects.map((project, index) => (
-              <div key={index} className="p-4 rounded-lg hover:bg-gray-50 transition-colors border-2 border-gray-200">
+            {projects.map((project) => (
+              <div key={project.id} className="p-4 rounded-lg hover:bg-gray-50 transition-colors border-2 border-gray-200">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
                     <h4 className="font-bold text-gray-900 text-base">{project.name}</h4>
@@ -164,6 +192,34 @@ export default function ClientProjectsPage() {
                       style={{ width: `${project.progress}%` }}
                     ></div>
                   </div>
+                </div>
+                <div className="flex justify-end space-x-2 mt-3">
+                  <ClientProjectDetailsDialog project={project} onEdit={() => handleEdit(project.id)} onDelete={() => handleDelete(project.id)}>
+                    <button className="px-3 py-1 text-sm border rounded-md">View Details</button>
+                  </ClientProjectDetailsDialog>
+                  <button
+                    className="px-3 py-1 text-sm border rounded-md"
+                    onClick={() => {
+                      const report = `Project: ${project.name}\nManager: ${project.manager}\nValue: ${project.value}\nProgress: ${project.progress}%`;
+                      const blob = new Blob([report], { type: 'text/plain' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `${project.name.replace(/\s+/g, '_')}_report.txt`;
+                      document.body.appendChild(a);
+                      a.click();
+                      a.remove();
+                      URL.revokeObjectURL(url);
+                    }}
+                  >
+                    Download Report
+                  </button>
+                  <button
+                    className="px-3 py-1 text-sm bg-indigo-600 text-white rounded-md"
+                    onClick={() => window.location.href = `mailto:${project.manager.replace(' ', '.').toLowerCase()}@example.com?subject=Project%20${encodeURIComponent(project.name)}`}
+                  >
+                    Contact Manager
+                  </button>
                 </div>
               </div>
             ))}

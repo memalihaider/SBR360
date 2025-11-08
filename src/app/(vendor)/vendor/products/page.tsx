@@ -6,23 +6,35 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import mockData from '@/lib/mock-data';
+import { useCurrencyStore } from '@/stores/currency';
+import { AddProductModal } from '@/components/add-product-modal';
+import { EditProductModal } from '@/components/edit-product-modal';
+import { UpdateStockModal } from '@/components/update-stock-modal';
+import { Product } from '@/types';
+import { toast } from 'sonner';
 
 export default function VendorProductsPage() {
+  const { formatAmount } = useCurrencyStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [showAddProductModal, setShowAddProductModal] = useState(false);
+  const [showEditProductModal, setShowEditProductModal] = useState(false);
+  const [showUpdateStockModal, setShowUpdateStockModal] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | undefined>(undefined);
+  const [products, setProducts] = useState(mockData.products);
 
-  // Mock vendor products
-  const products = mockData.products.map((product, index) => ({
+  // Mock vendor products with additional vendor-specific properties
+  const vendorProducts = products.map((product, index) => ({
     ...product,
     vendorSKU: `V-${product.sku}`,
     moq: Math.floor(Math.random() * 100) + 10,
     leadTime: Math.floor(Math.random() * 30) + 5,
-    availableStock: Math.floor(Math.random() * 1000) + 100,
-    reorderPoint: Math.floor(Math.random() * 200) + 50,
+    availableStock: product.currentStock,
+    reorderPoint: product.reorderPoint,
     lastUpdated: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toLocaleDateString(),
   }));
 
-  const filteredProducts = products.filter(product => {
+  const filteredProducts = vendorProducts.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          product.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          product.vendorSKU.toLowerCase().includes(searchTerm.toLowerCase());
@@ -30,14 +42,44 @@ export default function VendorProductsPage() {
     return matchesSearch && matchesCategory;
   });
 
-  const categories = Array.from(new Set(products.map(p => p.category)));
+  const categories = Array.from(new Set(vendorProducts.map(p => p.category)));
 
   const stats = [
-    { label: 'Total Products', value: products.length, color: 'text-pink-600', icon: '📦' },
-    { label: 'Low Stock', value: products.filter(p => p.availableStock < p.reorderPoint).length, color: 'text-orange-600', icon: '⚠️' },
-    { label: 'In Stock', value: products.filter(p => p.availableStock >= p.reorderPoint).length, color: 'text-green-600', icon: '✅' },
-    { label: 'Avg Lead Time', value: `${Math.round(products.reduce((sum, p) => sum + p.leadTime, 0) / products.length)} days`, color: 'text-blue-600', icon: '🕐' },
+    { label: 'Total Products', value: vendorProducts.length, color: 'text-pink-600', icon: '📦' },
+    { label: 'Low Stock', value: vendorProducts.filter(p => p.availableStock < p.reorderPoint).length, color: 'text-orange-600', icon: '⚠️' },
+    { label: 'In Stock', value: vendorProducts.filter(p => p.availableStock >= p.reorderPoint).length, color: 'text-green-600', icon: '✅' },
+    { label: 'Avg Lead Time', value: `${Math.round(vendorProducts.reduce((sum, p) => sum + p.leadTime, 0) / vendorProducts.length)} days`, color: 'text-blue-600', icon: '🕐' },
   ];
+
+  const handleAddProduct = () => {
+    setShowAddProductModal(true);
+  };
+
+  const handleEditProduct = (product: any) => {
+    setSelectedProduct(product);
+    setShowEditProductModal(true);
+  };
+
+  const handleUpdateStock = (product: any) => {
+    setSelectedProduct(product);
+    setShowUpdateStockModal(true);
+  };
+
+  const handleProductAdded = (newProduct: Product) => {
+    setProducts(prev => [...prev, newProduct]);
+    toast.success('Product added successfully!');
+  };
+
+  const handleProductUpdated = (updatedProduct: Product) => {
+    setProducts(prev => prev.map(p => p.id === updatedProduct.id ? updatedProduct : p));
+    toast.success('Product updated successfully!');
+  };
+
+  const handleStockUpdated = (productId: string, newStock: number) => {
+    setProducts(prev => prev.map(p =>
+      p.id === productId ? { ...p, currentStock: newStock } : p
+    ));
+  };
 
   return (
     <div className="space-y-6">
@@ -47,7 +89,7 @@ export default function VendorProductsPage() {
           <h1 className="text-3xl font-bold text-gray-900">Product Catalog</h1>
           <p className="text-gray-600 mt-1">Manage your product inventory and pricing</p>
         </div>
-        <Button className="bg-pink-600 hover:bg-pink-700 text-white">
+        <Button className="bg-pink-600 hover:bg-pink-700 text-white" onClick={handleAddProduct}>
           <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
           </svg>
@@ -124,7 +166,7 @@ export default function VendorProductsPage() {
               <div className="mb-4 p-4 bg-pink-50 rounded-lg">
                 <div className="flex items-baseline justify-between">
                   <span className="text-sm text-gray-600">Unit Price</span>
-                  <span className="text-2xl font-bold text-pink-600">${Math.floor(Math.random() * 200) + 50}</span>
+                  <span className="text-2xl font-bold text-pink-600">{formatAmount(Math.floor(Math.random() * 200) + 50)}</span>
                 </div>
               </div>
 
@@ -164,10 +206,17 @@ export default function VendorProductsPage() {
 
               {/* Actions */}
               <div className="flex gap-2">
-                <Button className="flex-1 bg-pink-600 hover:bg-pink-700 text-white">
+                <Button
+                  className="flex-1 bg-pink-600 hover:bg-pink-700 text-white"
+                  onClick={() => handleUpdateStock(product)}
+                >
                   Update Stock
                 </Button>
-                <Button variant="outline" className="flex-1 border-pink-600 text-pink-600 hover:bg-pink-50">
+                <Button
+                  variant="outline"
+                  className="flex-1 border-pink-600 text-pink-600 hover:bg-pink-50"
+                  onClick={() => handleEditProduct(product)}
+                >
                   Edit
                 </Button>
               </div>
@@ -192,6 +241,27 @@ export default function VendorProductsPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Modals */}
+      <AddProductModal
+        isOpen={showAddProductModal}
+        onClose={() => setShowAddProductModal(false)}
+        onProductAdded={handleProductAdded}
+      />
+
+      <EditProductModal
+        isOpen={showEditProductModal}
+        onClose={() => setShowEditProductModal(false)}
+        product={selectedProduct}
+        onProductUpdated={handleProductUpdated}
+      />
+
+      <UpdateStockModal
+        isOpen={showUpdateStockModal}
+        onClose={() => setShowUpdateStockModal(false)}
+        product={selectedProduct}
+        onStockUpdated={handleStockUpdated}
+      />
     </div>
   );
 }

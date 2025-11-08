@@ -34,13 +34,14 @@ import {
   MoreHorizontal
 } from 'lucide-react';
 import mockData from '@/lib/mock-data';
-import { Product, ProductCategory, ProductStatus } from '@/types';
+import { Product, ProductCategory, ProductStatus, MainCategory, SubCategory } from '@/types';
 
 const products = mockData.products;
 
 export default function AdminInventoryProductsPage() {
   const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [mainCategoryFilter, setMainCategoryFilter] = useState('all');
+  const [subCategoryFilter, setSubCategoryFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [stockFilter, setStockFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
@@ -56,7 +57,9 @@ export default function AdminInventoryProductsPage() {
     name: '',
     sku: '',
     description: '',
-    category: 'semiconductors' as ProductCategory,
+    mainCategoryId: '',
+    subCategoryId: '',
+    category: '' as ProductCategory,
     manufacturer: '',
     modelNumber: '',
     costPrice: 0,
@@ -78,7 +81,8 @@ export default function AdminInventoryProductsPage() {
                            product.manufacturer.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            product.category.toLowerCase().includes(searchTerm.toLowerCase());
 
-      const matchesCategory = categoryFilter === 'all' || product.category === categoryFilter;
+      const matchesMainCategory = mainCategoryFilter === 'all' || product.mainCategoryId === mainCategoryFilter;
+      const matchesSubCategory = subCategoryFilter === 'all' || product.subCategoryId === subCategoryFilter;
       const matchesStatus = statusFilter === 'all' || product.status === statusFilter;
 
       let matchesStock = true;
@@ -99,9 +103,9 @@ export default function AdminInventoryProductsPage() {
         }
       }
 
-      return matchesSearch && matchesCategory && matchesStatus && matchesStock;
+      return matchesSearch && matchesMainCategory && matchesSubCategory && matchesStatus && matchesStock;
     });
-  }, [searchTerm, categoryFilter, statusFilter, stockFilter]);
+  }, [searchTerm, mainCategoryFilter, subCategoryFilter, statusFilter, stockFilter]);
 
   // Pagination
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
@@ -150,7 +154,9 @@ export default function AdminInventoryProductsPage() {
       name: '',
       sku: '',
       description: '',
-      category: 'semiconductors' as ProductCategory,
+      mainCategoryId: '',
+      subCategoryId: '',
+      category: '' as ProductCategory,
       manufacturer: '',
       modelNumber: '',
       costPrice: 0,
@@ -268,19 +274,38 @@ export default function AdminInventoryProductsPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Category</Label>
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <Label>Main Category</Label>
+              <Select value={mainCategoryFilter} onValueChange={(value) => {
+                setMainCategoryFilter(value);
+                setSubCategoryFilter('all'); // Reset subcategory when main category changes
+              }}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  <SelectItem value="semiconductors">Semiconductors</SelectItem>
-                  <SelectItem value="test_equipment">Test Equipment</SelectItem>
-                  <SelectItem value="components">Components</SelectItem>
-                  <SelectItem value="cables">Cables</SelectItem>
-                  <SelectItem value="tools">Tools</SelectItem>
-                  <SelectItem value="accessories">Accessories</SelectItem>
+                  <SelectItem value="all">All Main Categories</SelectItem>
+                  {mockData.mainCategories.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.icon} {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Sub Category</Label>
+              <Select value={subCategoryFilter} onValueChange={setSubCategoryFilter} disabled={mainCategoryFilter === 'all'}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Sub Categories</SelectItem>
+                  {mainCategoryFilter !== 'all' && mockData.getSubCategoriesByMainCategory(mainCategoryFilter).map((subCategory) => (
+                    <SelectItem key={subCategory.id} value={subCategory.id}>
+                      {subCategory.icon} {subCategory.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -320,7 +345,8 @@ export default function AdminInventoryProductsPage() {
             <div className="flex items-end">
               <Button variant="outline" onClick={() => {
                 setSearchTerm('');
-                setCategoryFilter('all');
+                setMainCategoryFilter('all');
+                setSubCategoryFilter('all');
                 setStatusFilter('all');
                 setStockFilter('all');
                 setCurrentPage(1);
@@ -355,7 +381,8 @@ export default function AdminInventoryProductsPage() {
                 <TableRow>
                   <TableHead className="font-semibold text-gray-900">Product</TableHead>
                   <TableHead className="font-semibold text-gray-900">SKU</TableHead>
-                  <TableHead className="font-semibold text-gray-900">Category</TableHead>
+                  <TableHead className="font-semibold text-gray-900">Main Category</TableHead>
+                  <TableHead className="font-semibold text-gray-900">Sub Category</TableHead>
                   <TableHead className="font-semibold text-gray-900">Stock Status</TableHead>
                   <TableHead className="text-right font-semibold text-gray-900">Current Stock</TableHead>
                   <TableHead className="text-right font-semibold text-gray-900">Cost Price</TableHead>
@@ -378,7 +405,12 @@ export default function AdminInventoryProductsPage() {
                       <TableCell className="font-medium text-gray-900">{product.sku}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className="text-xs">
-                          {product.category.replace('_', ' ').toUpperCase()}
+                          {mockData.getMainCategoryById(product.mainCategoryId)?.name || 'Unknown'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs">
+                          {mockData.getSubCategoryById(product.subCategoryId)?.name || 'Unknown'}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -497,7 +529,8 @@ export default function AdminInventoryProductsPage() {
                   <div className="space-y-1 text-sm">
                     <p><span className="font-medium text-gray-700">Name:</span> <span className="text-gray-900">{selectedProduct.name}</span></p>
                     <p><span className="font-medium text-gray-700">SKU:</span> <span className="text-gray-900">{selectedProduct.sku}</span></p>
-                    <p><span className="font-medium text-gray-700">Category:</span> <span className="text-gray-900">{selectedProduct.category.replace('_', ' ').toUpperCase()}</span></p>
+                    <p><span className="font-medium text-gray-700">Main Category:</span> <span className="text-gray-900">{mockData.getMainCategoryById(selectedProduct.mainCategoryId)?.name || 'Unknown'}</span></p>
+                    <p><span className="font-medium text-gray-700">Sub Category:</span> <span className="text-gray-900">{mockData.getSubCategoryById(selectedProduct.subCategoryId)?.name || 'Unknown'}</span></p>
                     <p><span className="font-medium text-gray-700">Manufacturer:</span> <span className="text-gray-900">{selectedProduct.manufacturer}</span></p>
                     <p><span className="font-medium text-gray-700">Model:</span> <span className="text-gray-900">{selectedProduct.modelNumber || 'N/A'}</span></p>
                   </div>
@@ -652,18 +685,54 @@ export default function AdminInventoryProductsPage() {
 
                 <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="category">Category *</Label>
-                    <Select value={productForm.category} onValueChange={(value) => setProductForm({ ...productForm, category: value as ProductCategory })}>
+                    <Label htmlFor="mainCategory">Main Category *</Label>
+                    <Select 
+                      value={productForm.mainCategoryId} 
+                      onValueChange={(value) => {
+                        setProductForm({ 
+                          ...productForm, 
+                          mainCategoryId: value,
+                          subCategoryId: '', // Reset subcategory when main category changes
+                          category: `${mockData.getMainCategoryById(value)?.name || ''}` as ProductCategory
+                        });
+                      }}
+                    >
                       <SelectTrigger>
-                        <SelectValue />
+                        <SelectValue placeholder="Select main category" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="semiconductors">Semiconductors</SelectItem>
-                        <SelectItem value="test_equipment">Test Equipment</SelectItem>
-                        <SelectItem value="components">Components</SelectItem>
-                        <SelectItem value="cables">Cables</SelectItem>
-                        <SelectItem value="tools">Tools</SelectItem>
-                        <SelectItem value="accessories">Accessories</SelectItem>
+                        {mockData.mainCategories.map((category) => (
+                          <SelectItem key={category.id} value={category.id}>
+                            {category.icon} {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="subCategory">Sub Category *</Label>
+                    <Select 
+                      value={productForm.subCategoryId} 
+                      onValueChange={(value) => {
+                        const subCategory = mockData.getSubCategoryById(value);
+                        const mainCategory = mockData.getMainCategoryById(productForm.mainCategoryId || '');
+                        setProductForm({ 
+                          ...productForm, 
+                          subCategoryId: value,
+                          category: `${mainCategory?.name || ''}/${subCategory?.name || ''}` as ProductCategory
+                        });
+                      }}
+                      disabled={!productForm.mainCategoryId}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select sub category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {productForm.mainCategoryId && mockData.getSubCategoriesByMainCategory(productForm.mainCategoryId).map((subCategory) => (
+                          <SelectItem key={subCategory.id} value={subCategory.id}>
+                            {subCategory.icon} {subCategory.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -674,15 +743,6 @@ export default function AdminInventoryProductsPage() {
                       value={productForm.manufacturer}
                       onChange={(e) => setProductForm({ ...productForm, manufacturer: e.target.value })}
                       placeholder="Enter manufacturer"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="modelNumber">Model Number</Label>
-                    <Input
-                      id="modelNumber"
-                      value={productForm.modelNumber}
-                      onChange={(e) => setProductForm({ ...productForm, modelNumber: e.target.value })}
-                      placeholder="Enter model number"
                     />
                   </div>
                 </div>

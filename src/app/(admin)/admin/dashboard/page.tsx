@@ -268,7 +268,7 @@ export default function AdminDashboard() {
               <AreaChart data={revenueData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" fontSize={12} />
-                <YAxis tickFormatter={(value) => `${currency === 'USD' ? '$' : 'د.إ'}${(value / 1000).toFixed(0)}k`} fontSize={12} />
+                <YAxis tickFormatter={(value) => `${currency === 'AED' ? 'د.إ' : '$'}${(value / 1000).toFixed(0)}k`} fontSize={12} />
                 <Tooltip
                   formatter={(value: number) => [formatAmount(value), 'Revenue']}
                   labelFormatter={(label) => `Month: ${label}`}
@@ -844,7 +844,7 @@ function ProcessPayrollForm({ onClose }: { onClose: () => void }) {
           <p>Active Employees: {mockData.employees.filter(e => e.isActive).length}</p>
           <p>Estimated Total Payroll: {new Intl.NumberFormat('en-US', {
             style: 'currency',
-            currency: 'USD'
+            currency: 'AED'
           }).format(mockData.employees.filter(e => e.isActive).reduce((sum, emp) => sum + (emp.salary / 12), 0))}</p>
         </div>
       </div>

@@ -5,22 +5,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-
-interface Document {
-  id: string;
-  name: string;
-  type: string;
-  category: string;
-  projectName: string;
-  size: string;
-  uploadedBy: string;
-  uploadedDate: Date;
-  lastModified: Date;
-  fileType: 'pdf' | 'doc' | 'xls' | 'img' | 'zip' | 'other';
-  description?: string;
-}
+import useDocumentsStore, { type Document } from '@/stores/documents';
+import UploadDocumentDialog from '@/components/upload-document-dialog';
+import AddDocumentUrlDialog from '@/components/add-document-url-dialog';
+import DocumentDetailsDialog from '@/components/document-details-dialog';
+import { toast } from 'sonner';
 
 export default function ClientDocumentsPage() {
+  const { documents, addDocument } = useDocumentsStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [filterType, setFilterType] = useState<string>('all');
@@ -28,26 +20,44 @@ export default function ClientDocumentsPage() {
   const categories = ['Contracts', 'Proposals', 'Reports', 'Deliverables', 'Technical Docs', 'Invoices'];
   const fileTypes = ['PDF', 'Word', 'Excel', 'Images', 'Archives'];
 
-  // Generate mock documents
-  const documents: Document[] = Array.from({ length: 20 }, (_, i) => {
-    const fileTypes: ('pdf' | 'doc' | 'xls' | 'img' | 'zip')[] = ['pdf', 'doc', 'xls', 'img', 'zip'];
-    const fileType = fileTypes[Math.floor(Math.random() * fileTypes.length)];
-    const category = categories[Math.floor(Math.random() * categories.length)];
+  const handleUploadDocument = (doc: any) => {
+    addDocument({
+      name: doc.name,
+      type: doc.type,
+      category: doc.category,
+      projectName: 'Current Project', // Default project
+      size: doc.size,
+      uploadedBy: doc.uploadedBy,
+      fileType: 'other', // Default file type
+      description: `Uploaded document: ${doc.name}`,
+      shared: doc.shared,
+    });
+  };
 
-    return {
-      id: `DOC-${i + 1}`,
-      name: `Document ${i + 1}`,
-      type: fileType.toUpperCase(),
-      category,
-      projectName: `Project ${Math.floor(Math.random() * 5) + 1}`,
-      size: `${Math.floor(Math.random() * 5000) + 100} KB`,
-      uploadedBy: 'Project Team',
-      uploadedDate: new Date(Date.now() - Math.random() * 90 * 24 * 60 * 60 * 1000),
-      lastModified: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000),
-      fileType,
-      description: `Important ${category.toLowerCase()} document for project`,
-    };
-  });
+  const handleAddDocumentUrl = (doc: any) => {
+    addDocument({
+      name: doc.name,
+      type: doc.type,
+      category: doc.category,
+      projectName: 'Current Project', // Default project
+      size: doc.size,
+      uploadedBy: doc.uploadedBy,
+      fileType: 'other', // Default file type
+      description: `Document link: ${doc.name}`,
+      url: doc.url,
+      shared: doc.shared,
+    });
+  };
+
+  const handleDownloadDocument = (doc: Document) => {
+    if (doc.url) {
+      // For URL-based documents, open in new tab
+      window.open(doc.url, '_blank');
+    } else {
+      // For uploaded documents, simulate download
+      toast.info('Download functionality would be implemented here');
+    }
+  };
 
   const getFilteredDocuments = () => {
     let filtered = documents;
@@ -114,9 +124,29 @@ export default function ClientDocumentsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Documents</h1>
-        <p className="text-gray-600 mt-1">Access your project documents and files</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Documents</h1>
+          <p className="text-gray-600 mt-1">Access your project documents and files</p>
+        </div>
+        <div className="flex gap-2">
+          <AddDocumentUrlDialog categories={categories} onAdd={handleAddDocumentUrl}>
+            <Button variant="outline" className="px-4 py-2 border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-md text-sm font-medium transition-colors">
+              <svg className="w-4 h-4 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+              </svg>
+              Add URL
+            </Button>
+          </AddDocumentUrlDialog>
+          <UploadDocumentDialog categories={categories} onUpload={handleUploadDocument}>
+            <Button className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-sm font-medium transition-colors">
+              <svg className="w-4 h-4 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+              Upload
+            </Button>
+          </UploadDocumentDialog>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -248,14 +278,30 @@ export default function ClientDocumentsPage() {
               </div>
 
               <div className="flex gap-2">
-                <button className="flex-1 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-sm font-medium transition-colors">
-                  View
-                </button>
-                <button className="px-3 py-2 border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-md text-sm font-medium transition-colors">
+                <DocumentDetailsDialog doc={{
+                  id: parseInt(doc.id.replace('DOC-', '')),
+                  name: doc.name,
+                  url: doc.url || '#',
+                  type: doc.type,
+                  size: doc.size,
+                  uploadedBy: doc.uploadedBy,
+                  uploadedDate: doc.uploadedDate.toISOString(),
+                  category: doc.category,
+                  shared: doc.shared,
+                }}>
+                  <Button className="flex-1 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-sm font-medium transition-colors">
+                    View
+                  </Button>
+                </DocumentDetailsDialog>
+                <Button
+                  variant="outline"
+                  onClick={() => handleDownloadDocument(doc)}
+                  className="px-3 py-2 border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-md text-sm font-medium transition-colors"
+                >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                   </svg>
-                </button>
+                </Button>
               </div>
             </CardContent>
           </Card>

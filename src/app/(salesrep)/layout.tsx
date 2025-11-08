@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useAuthStore } from '@/stores/auth';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import { CurrencySelector } from '@/components/ui/currency-selector';
 
 export default function SalesRepLayout({
   children,
@@ -153,6 +154,7 @@ export default function SalesRepLayout({
                 Sales Representative Portal
               </h2>
               <div className="flex items-center space-x-4">
+                <CurrencySelector />
                 <div className="text-right">
                   <p className="text-sm font-semibold text-gray-900">
                     {user.firstName} {user.lastName}

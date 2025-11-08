@@ -2,27 +2,39 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ShoppingCart, DollarSign, Package, TrendingUp } from 'lucide-react';
+import { ShoppingCart, DollarSign, Package, TrendingUp, Eye, Plus, FileText } from 'lucide-react';
+import { useCurrencyStore } from '@/stores/currency';
+import useVendorOrdersStore from '@/stores/vendor-orders';
+import { useState } from 'react';
+import { CreatePurchaseOrderModal } from '@/components/purchase-order-modals';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 export default function VendorOrdersPage() {
+  const { formatAmount } = useCurrencyStore();
+  const { orders, invoices, addOrder, addInvoice } = useVendorOrdersStore();
+  const router = useRouter();
+  const [showCreateOrderModal, setShowCreateOrderModal] = useState(false);
+  const [showCreateInvoiceModal, setShowCreateInvoiceModal] = useState(false);
+
   const metrics = [
     {
       title: 'Active Orders',
-      value: '12',
+      value: orders.filter(o => o.status === 'pending' || o.status === 'confirmed').length.toString(),
       change: '+3',
       changeType: 'positive' as const,
       icon: ShoppingCart,
     },
     {
       title: 'Total Revenue',
-      value: '$125K',
+      value: formatAmount(orders.reduce((sum, order) => sum + order.totalAmount, 0)),
       change: '+18%',
       changeType: 'positive' as const,
       icon: DollarSign,
     },
     {
       title: 'Products Supplied',
-      value: '156',
+      value: orders.reduce((sum, order) => sum + order.items.reduce((itemSum, item) => itemSum + item.quantity, 0), 0).toString(),
       change: '+24',
       changeType: 'positive' as const,
       icon: Package,
@@ -36,50 +48,88 @@ export default function VendorOrdersPage() {
     },
   ];
 
-  const purchaseOrders = [
-    {
-      id: 'PO-2024-145',
-      items: [
-        { name: 'LED Panel 600x600', qty: 50, price: '$75' },
-        { name: 'Circuit Breaker 32A', qty: 30, price: '$45' },
-      ],
-      total: '$5,100',
-      status: 'pending',
-      orderDate: '2024-10-22',
-      deliveryDate: '2024-10-28',
-    },
-    {
-      id: 'PO-2024-142',
-      items: [
-        { name: 'Cable Wire 2.5mm', qty: 500, price: '$12' },
-        { name: 'Junction Box IP65', qty: 100, price: '$18' },
-      ],
-      total: '$7,800',
-      status: 'in_transit',
-      orderDate: '2024-10-18',
-      deliveryDate: '2024-10-24',
-    },
-    {
-      id: 'PO-2024-138',
-      items: [
-        { name: 'Smart Switch', qty: 75, price: '$55' },
-      ],
-      total: '$4,125',
-      status: 'delivered',
-      orderDate: '2024-10-15',
-      deliveryDate: '2024-10-20',
-    },
-  ];
+  const purchaseOrders = orders.slice(0, 3).map(order => ({
+    id: order.orderNumber,
+    items: order.items.map(item => ({
+      name: item.name,
+      qty: item.quantity,
+      price: item.unitPrice,
+    })),
+    total: order.totalAmount,
+    status: order.status === 'in_transit' ? 'in_transit' : order.status === 'delivered' ? 'delivered' : 'pending',
+    orderDate: order.orderDate.toISOString().split('T')[0],
+    deliveryDate: order.deliveryDate.toISOString().split('T')[0],
+  }));
 
-  const recentPayments = [
-    { id: 'PAY-2024-089', order: 'PO-2024-138', amount: '$4,125', date: '2024-10-21', status: 'completed' },
-    { id: 'PAY-2024-088', order: 'PO-2024-135', amount: '$8,750', date: '2024-10-18', status: 'completed' },
-    { id: 'PAY-2024-087', order: 'PO-2024-132', amount: '$12,300', date: '2024-10-15', status: 'completed' },
-  ];
+  const handleViewOrders = () => {
+    toast.info('Opening detailed orders view...');
+    // In a real application, this would open a detailed orders list modal or navigate to a dedicated orders page
+  };
+
+  const handleUpdateStock = () => {
+    router.push('/inventory/stock');
+  };
+
+  const handleCreateOrder = () => {
+    setShowCreateOrderModal(true);
+  };
+
+  const handleViewInvoices = () => {
+    toast.info('Opening invoices view...');
+    // In a real application, this would navigate to invoices page or open invoices modal
+  };
+
+  const handleSubmitInvoice = () => {
+    setShowCreateInvoiceModal(true);
+  };
+
+  const handleOrderCreated = (order: any) => {
+    addOrder({
+      clientName: order.supplierName,
+      items: order.items.map((item: any) => ({
+        name: item.productName,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        totalPrice: item.totalPrice,
+      })),
+      totalAmount: order.totalAmount,
+      status: 'pending',
+      deliveryDate: order.expectedDelivery,
+      notes: order.notes,
+    });
+    toast.success('Order created successfully!');
+    setShowCreateOrderModal(false);
+  };
+
+  const handleInvoiceCreated = () => {
+    // Create a sample invoice for demonstration
+    const sampleOrder = orders[0];
+    if (sampleOrder) {
+      addInvoice({
+        orderId: sampleOrder.id,
+        orderNumber: sampleOrder.orderNumber,
+        amount: sampleOrder.totalAmount * 0.9,
+        tax: sampleOrder.totalAmount * 0.1,
+        totalAmount: sampleOrder.totalAmount,
+        status: 'draft',
+        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      });
+      toast.success('Invoice created successfully!');
+    }
+    setShowCreateInvoiceModal(false);
+  };
+
+  const recentPayments = invoices.slice(0, 3).map(invoice => ({
+    id: invoice.invoiceNumber,
+    order: invoice.orderNumber,
+    amount: invoice.totalAmount,
+    date: invoice.issueDate.toISOString().split('T')[0],
+    status: invoice.status === 'paid' ? 'completed' : invoice.status,
+  }));
 
   return (
     <div className="space-y-6">
-      <div className="bg-gradient-to-r from-pink-600 to-pink-700 rounded-xl p-6 shadow-lg">
+      <div className="bg-linear-to-r from-pink-600 to-pink-700 rounded-xl p-6 shadow-lg">
         <h1 className="text-3xl font-bold text-white">Supplier Dashboard</h1>
         <p className="text-pink-100 mt-1 text-lg">Manage orders, deliveries, and payments</p>
       </div>
@@ -112,7 +162,7 @@ export default function VendorOrdersPage() {
 
       {/* Purchase Orders */}
       <Card className="shadow-lg">
-        <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-t-lg">
+        <CardHeader className="bg-linear-to-r from-purple-50 to-pink-50 rounded-t-lg">
           <CardTitle className="text-xl text-gray-900">Purchase Orders</CardTitle>
           <CardDescription className="text-gray-600 font-medium">
             Current and recent orders from clients
@@ -140,7 +190,7 @@ export default function VendorOrdersPage() {
                       {order.items.map((item, idx) => (
                         <div key={idx} className="flex items-center justify-between text-sm bg-gray-50 p-2 rounded">
                           <span className="text-gray-700">{item.name}</span>
-                          <span className="text-gray-600">Qty: <span className="font-semibold">{item.qty}</span> × {item.price}</span>
+                          <span className="text-gray-600">Qty: <span className="font-semibold">{item.qty}</span> × {formatAmount(item.price)}</span>
                         </div>
                       ))}
                     </div>
@@ -155,7 +205,7 @@ export default function VendorOrdersPage() {
                       </div>
                       <div>
                         <p className="text-xs text-gray-500">Total Amount</p>
-                        <p className="font-bold text-pink-600 text-lg">{order.total}</p>
+                        <p className="font-bold text-pink-600 text-lg">{formatAmount(order.total)}</p>
                       </div>
                     </div>
                   </div>
@@ -168,7 +218,7 @@ export default function VendorOrdersPage() {
 
       {/* Recent Payments */}
       <Card className="shadow-lg">
-        <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-t-lg">
+        <CardHeader className="bg-linear-to-r from-green-50 to-emerald-50 rounded-t-lg">
           <CardTitle className="text-xl text-gray-900">Recent Payments</CardTitle>
           <CardDescription className="text-gray-600 font-medium">
             Payment history and transactions
@@ -189,7 +239,7 @@ export default function VendorOrdersPage() {
                   <p className="text-xs text-gray-500 mt-1">{payment.date}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-lg font-bold text-green-600">{payment.amount}</p>
+                  <p className="text-lg font-bold text-green-600">{formatAmount(payment.amount)}</p>
                 </div>
               </div>
             ))}
@@ -199,15 +249,18 @@ export default function VendorOrdersPage() {
 
       {/* Quick Actions */}
       <Card className="shadow-lg">
-        <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-lg">
+        <CardHeader className="bg-linear-to-r from-blue-50 to-indigo-50 rounded-t-lg">
           <CardTitle className="text-xl text-gray-900">Quick Actions</CardTitle>
           <CardDescription className="text-gray-600 font-medium">
             Common vendor tasks
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <button className="p-5 border-2 border-gray-200 rounded-xl hover:bg-gradient-to-br hover:from-pink-50 hover:to-purple-50 hover:border-pink-300 text-left transition-all duration-200 group shadow-md hover:shadow-xl">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <button
+              onClick={handleViewOrders}
+              className="p-5 border-2 border-gray-200 rounded-xl hover:bg-linear-to-br hover:from-pink-50 hover:to-purple-50 hover:border-pink-300 text-left transition-all duration-200 group shadow-md hover:shadow-xl"
+            >
               <div className="flex items-center space-x-3 mb-2">
                 <div className="p-2 bg-pink-100 rounded-lg group-hover:bg-pink-200 transition-colors">
                   <ShoppingCart className="h-5 w-5 text-pink-600" />
@@ -218,7 +271,10 @@ export default function VendorOrdersPage() {
                 All purchase orders
               </p>
             </button>
-            <button className="p-5 border-2 border-gray-200 rounded-xl hover:bg-gradient-to-br hover:from-blue-50 hover:to-indigo-50 hover:border-blue-300 text-left transition-all duration-200 group shadow-md hover:shadow-xl">
+            <button
+              onClick={handleUpdateStock}
+              className="p-5 border-2 border-gray-200 rounded-xl hover:bg-linear-to-br hover:from-blue-50 hover:to-indigo-50 hover:border-blue-300 text-left transition-all duration-200 group shadow-md hover:shadow-xl"
+            >
               <div className="flex items-center space-x-3 mb-2">
                 <div className="p-2 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors">
                   <Package className="h-5 w-5 text-blue-600" />
@@ -229,10 +285,41 @@ export default function VendorOrdersPage() {
                 Product availability
               </p>
             </button>
-            <button className="p-5 border-2 border-gray-200 rounded-xl hover:bg-gradient-to-br hover:from-green-50 hover:to-emerald-50 hover:border-green-300 text-left transition-all duration-200 group shadow-md hover:shadow-xl">
+            <button
+              onClick={handleCreateOrder}
+              className="p-5 border-2 border-gray-200 rounded-xl hover:bg-linear-to-br hover:from-green-50 hover:to-emerald-50 hover:border-green-300 text-left transition-all duration-200 group shadow-md hover:shadow-xl"
+            >
               <div className="flex items-center space-x-3 mb-2">
                 <div className="p-2 bg-green-100 rounded-lg group-hover:bg-green-200 transition-colors">
-                  <DollarSign className="h-5 w-5 text-green-600" />
+                  <Plus className="h-5 w-5 text-green-600" />
+                </div>
+                <h3 className="font-bold text-gray-900 text-lg">Create Order</h3>
+              </div>
+              <p className="text-sm text-gray-600 font-medium">
+                New purchase order
+              </p>
+            </button>
+            <button
+              onClick={handleViewInvoices}
+              className="p-5 border-2 border-gray-200 rounded-xl hover:bg-linear-to-br hover:from-purple-50 hover:to-pink-50 hover:border-purple-300 text-left transition-all duration-200 group shadow-md hover:shadow-xl"
+            >
+              <div className="flex items-center space-x-3 mb-2">
+                <div className="p-2 bg-purple-100 rounded-lg group-hover:bg-purple-200 transition-colors">
+                  <FileText className="h-5 w-5 text-purple-600" />
+                </div>
+                <h3 className="font-bold text-gray-900 text-lg">View Invoices</h3>
+              </div>
+              <p className="text-sm text-gray-600 font-medium">
+                Invoice management
+              </p>
+            </button>
+            <button
+              onClick={handleSubmitInvoice}
+              className="p-5 border-2 border-gray-200 rounded-xl hover:bg-linear-to-br hover:from-orange-50 hover:to-red-50 hover:border-orange-300 text-left transition-all duration-200 group shadow-md hover:shadow-xl"
+            >
+              <div className="flex items-center space-x-3 mb-2">
+                <div className="p-2 bg-orange-100 rounded-lg group-hover:bg-orange-200 transition-colors">
+                  <DollarSign className="h-5 w-5 text-orange-600" />
                 </div>
                 <h3 className="font-bold text-gray-900 text-lg">Submit Invoice</h3>
               </div>
@@ -243,6 +330,39 @@ export default function VendorOrdersPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Modals */}
+      <CreatePurchaseOrderModal
+        isOpen={showCreateOrderModal}
+        onClose={() => setShowCreateOrderModal(false)}
+        onOrderCreated={handleOrderCreated}
+      />
+
+      {/* Simple Invoice Modal for demo */}
+      {showCreateInvoiceModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-bold mb-4">Create Invoice</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              This will create a sample invoice for the first order. In a real application, this would have a full form.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setShowCreateInvoiceModal(false)}
+                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleInvoiceCreated}
+                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+              >
+                Create Invoice
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

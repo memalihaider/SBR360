@@ -4,6 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { useAuthStore } from '@/stores/auth';
 import { Calendar, Clock, DollarSign, FileText, CheckCircle, AlertCircle } from 'lucide-react';
+import { LogTimeDialog } from '@/components/log-time-dialog';
+import { RequestLeaveDialog } from '@/components/request-leave-dialog';
+import { ViewPayslipDialog } from '@/components/view-payslip-dialog';
 
 export default function EmployeeDashboard() {
   const { user } = useAuthStore();
@@ -251,39 +254,47 @@ export default function EmployeeDashboard() {
           </CardHeader>
           <CardContent className="pt-6">
             <div className="grid grid-cols-1 gap-3">
-              <button className="p-4 border-2 border-gray-200 rounded-xl hover:bg-linear-to-br hover:from-blue-50 hover:to-indigo-50 hover:border-blue-300 text-left transition-all duration-200 group shadow-md hover:shadow-xl">
-                <div className="flex items-center space-x-3 mb-2">
-                  <div className="p-2 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors">
-                    <Clock className="h-5 w-5 text-blue-600" />
+              <LogTimeDialog>
+                <button className="p-4 border-2 border-gray-200 rounded-xl hover:bg-linear-to-br hover:from-blue-50 hover:to-indigo-50 hover:border-blue-300 text-left transition-all duration-200 group shadow-md hover:shadow-xl">
+                  <div className="flex items-center space-x-3 mb-2">
+                    <div className="p-2 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors">
+                      <Clock className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <h3 className="font-bold text-gray-900 text-lg">Log Time</h3>
                   </div>
-                  <h3 className="font-bold text-gray-900 text-lg">Log Time</h3>
-                </div>
-                <p className="text-sm text-gray-600 font-medium">
-                  Record your work hours for today
-                </p>
-              </button>
-              <button className="p-4 border-2 border-gray-200 rounded-xl hover:bg-linear-to-br hover:from-green-50 hover:to-emerald-50 hover:border-green-300 text-left transition-all duration-200 group shadow-md hover:shadow-xl">
-                <div className="flex items-center space-x-3 mb-2">
-                  <div className="p-2 bg-green-100 rounded-lg group-hover:bg-green-200 transition-colors">
-                    <FileText className="h-5 w-5 text-green-600" />
+                  <p className="text-sm text-gray-600 font-medium">
+                    Record your work hours for today
+                  </p>
+                </button>
+              </LogTimeDialog>
+
+              <RequestLeaveDialog>
+                <button className="p-4 border-2 border-gray-200 rounded-xl hover:bg-linear-to-br hover:from-green-50 hover:to-emerald-50 hover:border-green-300 text-left transition-all duration-200 group shadow-md hover:shadow-xl">
+                  <div className="flex items-center space-x-3 mb-2">
+                    <div className="p-2 bg-green-100 rounded-lg group-hover:bg-green-200 transition-colors">
+                      <FileText className="h-5 w-5 text-green-600" />
+                    </div>
+                    <h3 className="font-bold text-gray-900 text-lg">Request Leave</h3>
                   </div>
-                  <h3 className="font-bold text-gray-900 text-lg">Request Leave</h3>
-                </div>
-                <p className="text-sm text-gray-600 font-medium">
-                  Submit a leave request
-                </p>
-              </button>
-              <button className="p-4 border-2 border-gray-200 rounded-xl hover:bg-linear-to-br hover:from-purple-50 hover:to-pink-50 hover:border-purple-300 text-left transition-all duration-200 group shadow-md hover:shadow-xl">
-                <div className="flex items-center space-x-3 mb-2">
-                  <div className="p-2 bg-purple-100 rounded-lg group-hover:bg-purple-200 transition-colors">
-                    <DollarSign className="h-5 w-5 text-purple-600" />
+                  <p className="text-sm text-gray-600 font-medium">
+                    Submit a leave request
+                  </p>
+                </button>
+              </RequestLeaveDialog>
+
+              <ViewPayslipDialog>
+                <button className="p-4 border-2 border-gray-200 rounded-xl hover:bg-linear-to-br hover:from-purple-50 hover:to-pink-50 hover:border-purple-300 text-left transition-all duration-200 group shadow-md hover:shadow-xl">
+                  <div className="flex items-center space-x-3 mb-2">
+                    <div className="p-2 bg-purple-100 rounded-lg group-hover:bg-purple-200 transition-colors">
+                      <DollarSign className="h-5 w-5 text-purple-600" />
+                    </div>
+                    <h3 className="font-bold text-gray-900 text-lg">View Payslip</h3>
                   </div>
-                  <h3 className="font-bold text-gray-900 text-lg">View Payslip</h3>
-                </div>
-                <p className="text-sm text-gray-600 font-medium">
-                  Access your latest payslip
-                </p>
-              </button>
+                  <p className="text-sm text-gray-600 font-medium">
+                    Access your latest payslip
+                  </p>
+                </button>
+              </ViewPayslipDialog>
             </div>
           </CardContent>
         </Card>

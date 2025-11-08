@@ -41,70 +41,52 @@ import Link from 'next/link';
 import mockData from '@/lib/mock-data';
 import { Customer } from '@/types';
 
-// Enhanced mock quotations data with more details
-const quotations = Array.from({ length: 120 }, (_, i) => {
-  const customer = mockData.customers[Math.floor(Math.random() * mockData.customers.length)];
-  const statusOptions = ['draft', 'sent', 'under_review', 'approved', 'rejected', 'expired', 'converted'];
-  const status = statusOptions[Math.floor(Math.random() * statusOptions.length)];
-  const issueDate = new Date(2025, Math.floor(Math.random() * 11), Math.floor(Math.random() * 28) + 1);
-  const validDays = Math.floor(Math.random() * 60) + 30; // 30-90 days validity
-  const validUntil = new Date(issueDate.getTime() + validDays * 24 * 60 * 60 * 1000);
+// Use shared quotations data from mockData
+const quotations = mockData.quotations;
 
+// Helper function to get customer info
+const getCustomerInfo = (customerId: string) => {
+  return mockData.getCustomerById(customerId);
+};
+
+// Helper function to get user info
+const getUserInfo = (userId: string) => {
+  // For now, return a placeholder. In a real app, you'd have a users table
+  return { name: `User ${userId.split('-')[1]}` };
+};
+
+// Helper function to get product info
+const getProductInfo = (productId: string) => {
+  return mockData.getProductById(productId);
+};
+
+// Calculate quotation totals and enrich data
+const enrichedQuotations = quotations.map(quotation => {
+  const customer = getCustomerInfo(quotation.customerId);
+  const createdByUser = getUserInfo(quotation.createdBy);
+  
+  // Calculate totals from items
+  const subtotal = quotation.items.reduce((sum, item) => sum + item.totalPrice, 0);
+  
   return {
-    id: `quot-${i + 1}`,
-    quotationNumber: `QT-2025-${String(i + 1).padStart(4, '0')}`,
-    customerId: customer.id,
-    customerName: customer.primaryContact.name,
-    customerEmail: customer.primaryContact.email,
-    customerPhone: customer.primaryContact.phone,
-    customerCompany: customer.companyName,
-    issueDate,
-    validUntil,
-    status,
-    items: Array.from({ length: Math.floor(Math.random() * 8) + 1 }, (_, j) => ({
-      id: j,
-      productId: `prod-${Math.floor(Math.random() * 50) + 1}`,
-      productName: mockData.products[Math.floor(Math.random() * mockData.products.length)]?.name || 'Product',
-      quantity: Math.floor(Math.random() * 10) + 1,
-      rate: Math.random() * 10000 + 100,
-      discount: Math.random() * 10,
-      tax: Math.random() * 15 + 5,
-      amount: 0
-    })),
-    subtotal: 0,
-    totalDiscount: 0,
-    totalTax: 0,
-    serviceCharges: Math.random() * 1000,
-    totalAmount: Math.random() * 500000 + 10000,
-    createdBy: `user-${Math.floor(Math.random() * 3) + 2}`,
-    createdByName: ['John Smith', 'Sarah Johnson', 'Mike Davis'][Math.floor(Math.random() * 3)],
-    notes: Math.random() > 0.7 ? 'Special pricing applied for bulk order' : '',
-    lastModified: new Date(issueDate.getTime() + Math.random() * 30 * 24 * 60 * 60 * 1000),
-    convertedToProject: status === 'converted' ? `proj-${Math.floor(Math.random() * 50) + 1}` : null,
-    convertedToInvoice: status === 'approved' && Math.random() > 0.5 ? `inv-${Math.floor(Math.random() * 30) + 1}` : null
+    ...quotation,
+    customerName: customer?.companyName || 'Unknown Customer',
+    customerCompany: customer?.companyName || 'Unknown Company',
+    createdByName: createdByUser.name,
+    subtotal,
+    totalAmount: quotation.totalAmount,
+    issueDate: quotation.createdAt,
+    validUntil: quotation.validUntil,
+    status: quotation.status,
+    items: quotation.items.map(item => {
+      const product = getProductInfo(item.productId);
+      return {
+        ...item,
+        productName: product?.name || 'Unknown Product',
+        productSku: product?.sku || 'N/A'
+      };
+    })
   };
-});
-
-// Calculate totals for each quotation
-quotations.forEach(quotation => {
-  let subtotal = 0;
-  let totalDiscount = 0;
-  let totalTax = 0;
-
-  quotation.items.forEach(item => {
-    const itemSubtotal = item.quantity * item.rate;
-    const itemDiscount = itemSubtotal * (item.discount / 100);
-    const itemTax = (itemSubtotal - itemDiscount) * (item.tax / 100);
-
-    subtotal += itemSubtotal;
-    totalDiscount += itemDiscount;
-    totalTax += itemTax;
-  });
-
-  quotation.subtotal = subtotal;
-  quotation.totalDiscount = totalDiscount;
-  quotation.totalTax = totalTax;
-  quotation.totalAmount = subtotal - totalDiscount + totalTax + quotation.serviceCharges;
 });
 
 export default function AdminSalesQuotationsPage() {
@@ -119,7 +101,7 @@ export default function AdminSalesQuotationsPage() {
 
   // Filter quotations based on search and filters
   const filteredQuotations = useMemo(() => {
-    return quotations.filter(quotation => {
+    return enrichedQuotations.filter(quotation => {
       const matchesSearch = quotation.quotationNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            quotation.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            quotation.customerCompany.toLowerCase().includes(searchTerm.toLowerCase());
@@ -151,7 +133,7 @@ export default function AdminSalesQuotationsPage() {
 
       return matchesSearch && matchesStatus && matchesCustomer && matchesDate;
     });
-  }, [searchTerm, statusFilter, customerFilter, dateFilter]);
+  }, [searchTerm, statusFilter, customerFilter, dateFilter, enrichedQuotations]);
 
   // Pagination
   const totalPages = Math.ceil(filteredQuotations.length / itemsPerPage);
@@ -161,10 +143,10 @@ export default function AdminSalesQuotationsPage() {
   );
 
   const quotationStats = [
-    { title: 'Total Quotations', value: quotations.length.toString(), change: '+24', icon: FileText, color: 'blue' },
-    { title: 'Pending Review', value: quotations.filter(q => q.status === 'sent' || q.status === 'under_review').length.toString(), change: '+8', icon: Clock, color: 'yellow' },
-    { title: 'Approved', value: quotations.filter(q => q.status === 'approved').length.toString(), change: '+12', icon: CheckCircle, color: 'green' },
-    { title: 'Total Value', value: '$' + (quotations.reduce((sum, q) => sum + q.totalAmount, 0) / 1000000).toFixed(1) + 'M', change: '+18%', icon: DollarSign, color: 'purple' },
+    { title: 'Total Quotations', value: enrichedQuotations.length.toString(), change: '+24', icon: FileText, color: 'blue' },
+    { title: 'Pending Review', value: enrichedQuotations.filter(q => q.status === 'sent' || q.status === 'under_review').length.toString(), change: '+8', icon: Clock, color: 'yellow' },
+    { title: 'Approved', value: enrichedQuotations.filter(q => q.status === 'approved').length.toString(), change: '+12', icon: CheckCircle, color: 'green' },
+    { title: 'Total Value', value: '$' + (enrichedQuotations.reduce((sum, q) => sum + q.totalAmount, 0) / 1000000).toFixed(1) + 'M', change: '+18%', icon: DollarSign, color: 'purple' },
   ];
 
   const getStatusBadge = (status: string) => {
@@ -344,7 +326,7 @@ export default function AdminSalesQuotationsPage() {
             <div>
               <CardTitle className="text-xl text-gray-900">Quotations</CardTitle>
               <CardDescription className="text-gray-600 font-medium">
-                {filteredQuotations.length} of {quotations.length} quotations
+                {filteredQuotations.length} of {enrichedQuotations.length} quotations
               </CardDescription>
             </div>
             <div className="text-sm text-gray-500">

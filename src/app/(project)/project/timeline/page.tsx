@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -20,8 +21,39 @@ interface TimelineEvent {
 }
 
 export default function TimelinePage() {
+  const router = useRouter();
   const [viewMode, setViewMode] = useState<'all' | 'month' | 'quarter'>('all');
   const [selectedProject, setSelectedProject] = useState<string>('all');
+
+  const handleAddMilestone = () => {
+    router.push('/project/timeline/new');
+  };
+
+  const handleViewEvent = (event: TimelineEvent) => {
+    if (event.type === 'milestone') {
+      // Navigate to project detail page where milestones are shown
+      router.push(`/project/projects/${event.projectId}`);
+    } else if (event.type === 'task') {
+      // Navigate to task detail page
+      router.push(`/project/tasks/${event.id}`);
+    } else {
+      // For phases and deadlines, navigate to project detail
+      router.push(`/project/projects/${event.projectId}`);
+    }
+  };
+
+  const handleEditEvent = (event: TimelineEvent) => {
+    if (event.type === 'milestone') {
+      // Navigate to project edit page
+      router.push(`/project/projects/${event.projectId}/edit`);
+    } else if (event.type === 'task') {
+      // Navigate to task edit page (assuming we have one)
+      router.push(`/project/tasks/${event.id}/edit`);
+    } else {
+      // For phases and deadlines, navigate to project edit
+      router.push(`/project/projects/${event.projectId}/edit`);
+    }
+  };
 
   // Generate timeline events from projects
   const timelineEvents: TimelineEvent[] = mockData.projects.flatMap((project) => {
@@ -33,8 +65,8 @@ export default function TimelinePage() {
       projectId: project.id,
       projectName: project.name,
       type: 'phase',
-      title: 'Project Start',
-      description: `Kickoff for ${project.name}`,
+      title: 'Development Start',
+      description: `Kickoff for ${project.name} development`,
       date: new Date(project.startDate),
       status: new Date(project.startDate) > new Date() ? 'upcoming' : 'completed',
       isCompleted: new Date(project.startDate) <= new Date(),
@@ -77,8 +109,8 @@ export default function TimelinePage() {
       projectId: project.id,
       projectName: project.name,
       type: 'deadline',
-      title: 'Project Deadline',
-      description: `Expected completion for ${project.name}`,
+      title: 'Launch Deadline',
+      description: `Expected launch for ${project.name}`,
       date: new Date(project.endDate),
       status: project.status === 'completed' ? 'completed' : new Date(project.endDate) < new Date() ? 'overdue' : 'upcoming',
       isCompleted: project.status === 'completed',
@@ -167,8 +199,8 @@ export default function TimelinePage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Timeline</h1>
-          <p className="text-gray-600 mt-1">Project milestones and deadlines</p>
+          <h1 className="text-3xl font-bold text-gray-900">Development Timeline</h1>
+          <p className="text-gray-600 mt-1">Product development milestones and deadlines</p>
         </div>
         <div className="flex items-center gap-3">
           <select
@@ -183,7 +215,7 @@ export default function TimelinePage() {
               </option>
             ))}
           </select>
-          <Button className="bg-purple-600 hover:bg-purple-700 text-white">
+          <Button className="bg-purple-600 hover:bg-purple-700 text-white" onClick={handleAddMilestone}>
             <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
@@ -196,13 +228,13 @@ export default function TimelinePage() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600">Total Milestones</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">Development Phases</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-gray-900">
               {timelineEvents.filter(e => e.type === 'milestone').length}
             </div>
-            <p className="text-sm text-gray-500 mt-1">Across all projects</p>
+            <p className="text-sm text-gray-500 mt-1">Across all products</p>
           </CardContent>
         </Card>
 
@@ -232,7 +264,7 @@ export default function TimelinePage() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-green-600">{completedMilestones}</div>
-            <p className="text-sm text-gray-500 mt-1">Delivered</p>
+            <p className="text-sm text-gray-500 mt-1">Launched</p>
           </CardContent>
         </Card>
       </div>
@@ -321,9 +353,9 @@ export default function TimelinePage() {
                             </div>
                           </div>
                           <div className="flex gap-2 ml-4">
-                            <Button size="sm" variant="outline">View</Button>
+                            <Button size="sm" variant="outline" onClick={() => handleViewEvent(event)}>View</Button>
                             {!event.isCompleted && (
-                              <Button size="sm" variant="outline">Edit</Button>
+                              <Button size="sm" variant="outline" onClick={() => handleEditEvent(event)}>Edit</Button>
                             )}
                           </div>
                         </div>

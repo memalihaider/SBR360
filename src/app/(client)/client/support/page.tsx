@@ -6,70 +6,15 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-
-interface SupportTicket {
-  id: string;
-  ticketNumber: string;
-  subject: string;
-  description: string;
-  category: string;
-  priority: 'low' | 'medium' | 'high' | 'urgent';
-  status: 'open' | 'in_progress' | 'waiting_response' | 'resolved' | 'closed';
-  createdDate: Date;
-  lastUpdated: Date;
-  assignedTo?: string;
-  messages: {
-    id: string;
-    from: string;
-    message: string;
-    timestamp: Date;
-    isClient: boolean;
-  }[];
-}
+import { useSupportTicketsStore, type SupportTicket } from '@/stores/support-tickets';
+import AddSupportTicketDialog from '@/components/add-support-ticket-dialog';
+import SupportTicketDetailsDialog from '@/components/support-ticket-details-dialog';
+import { toast } from 'sonner';
 
 export default function ClientSupportPage() {
+  const { tickets, addTicket, addMessage, updateTicketStatus } = useSupportTicketsStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'open' | 'in_progress' | 'resolved'>('all');
-  const [showNewTicketForm, setShowNewTicketForm] = useState(false);
-
-  const categories = ['Technical Issue', 'Billing', 'Project Inquiry', 'General Support', 'Feature Request'];
-
-  // Generate mock tickets
-  const tickets: SupportTicket[] = Array.from({ length: 8 }, (_, i) => {
-    const statuses: ('open' | 'in_progress' | 'waiting_response' | 'resolved')[] = ['open', 'in_progress', 'waiting_response', 'resolved'];
-    const priorities: ('low' | 'medium' | 'high' | 'urgent')[] = ['low', 'medium', 'high', 'urgent'];
-    const status = statuses[Math.floor(Math.random() * statuses.length)];
-    const priority = priorities[Math.floor(Math.random() * priorities.length)];
-
-    return {
-      id: `TKT-${i + 1}`,
-      ticketNumber: `SUPP-2025-${String(i + 1).padStart(4, '0')}`,
-      subject: `Support inquiry ${i + 1}`,
-      description: `Need assistance with project-related matter ${i + 1}`,
-      category: categories[Math.floor(Math.random() * categories.length)],
-      priority,
-      status,
-      createdDate: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000),
-      lastUpdated: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000),
-      assignedTo: status !== 'open' ? 'Support Team Member' : undefined,
-      messages: [
-        {
-          id: `MSG-${i}-1`,
-          from: 'You',
-          message: `Initial support request for issue ${i + 1}`,
-          timestamp: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000),
-          isClient: true,
-        },
-        ...(status !== 'open' ? [{
-          id: `MSG-${i}-2`,
-          from: 'Support Team',
-          message: 'We have received your request and are working on it.',
-          timestamp: new Date(Date.now() - Math.random() * 20 * 24 * 60 * 60 * 1000),
-          isClient: false,
-        }] : []),
-      ],
-    };
-  });
 
   const getFilteredTickets = () => {
     let filtered = tickets;
@@ -115,6 +60,44 @@ export default function ClientSupportPage() {
     return badges[priority] || 'bg-gray-100 text-gray-800';
   };
 
+  const handleCreateTicket = (ticketData: any) => {
+    addTicket({
+      subject: ticketData.title,
+      description: ticketData.description,
+      category: ticketData.category || 'General Support',
+      priority: ticketData.priority || 'medium',
+      status: 'open',
+    });
+    toast.success('Support ticket created successfully!');
+  };
+
+  const handleAddReply = (ticketId: string, reply: string) => {
+    addMessage(ticketId, reply, true);
+    toast.success('Reply added successfully!');
+  };
+
+  // Adapter for dialog component types
+  const adaptTicketForDialog = (ticket: SupportTicket) => ({
+    id: parseInt(ticket.id.replace('TKT-', '')),
+    title: ticket.subject,
+    description: ticket.description,
+    status: ticket.status,
+    priority: ticket.priority,
+    category: ticket.category,
+    createdDate: ticket.createdDate.toISOString(),
+    lastUpdate: ticket.lastUpdated.toISOString(),
+    assignedTo: ticket.assignedTo,
+    responses: ticket.messages.length,
+    messages: ticket.messages,
+  });
+
+  const handleDialogAddComment = (ticketId: number, comment: string) => {
+    const ticket = tickets.find(t => parseInt(t.id.replace('TKT-', '')) === ticketId);
+    if (ticket) {
+      handleAddReply(ticket.id, comment);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -123,63 +106,17 @@ export default function ClientSupportPage() {
           <h1 className="text-3xl font-bold text-gray-900">Support</h1>
           <p className="text-gray-600 mt-1">Get help and submit support tickets</p>
         </div>
-        <button
-          onClick={() => setShowNewTicketForm(!showNewTicketForm)}
-          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-sm font-medium transition-colors"
-        >
-          <svg className="w-4 h-4 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          New Ticket
-        </button>
+        <AddSupportTicketDialog onCreate={handleCreateTicket}>
+          <Button className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-sm font-medium transition-colors">
+            <svg className="w-4 h-4 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            New Ticket
+          </Button>
+        </AddSupportTicketDialog>
       </div>
 
-      {/* New Ticket Form */}
-      {showNewTicketForm && (
-        <Card className="border-2 border-indigo-200">
-          <CardHeader className="bg-indigo-50">
-            <CardTitle>Create New Support Ticket</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-6 space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Subject</label>
-              <Input placeholder="Brief description of your issue" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
-              <select className="w-full px-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                {categories.map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Priority</label>
-              <select className="w-full px-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-                <option value="urgent">Urgent</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
-              <Textarea placeholder="Provide detailed information about your issue" rows={4} />
-            </div>
-            <div className="flex gap-2">
-              <button className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-sm font-medium transition-colors">
-                Submit Ticket
-              </button>
-              <button
-                onClick={() => setShowNewTicketForm(false)}
-                className="px-4 py-2 border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-md text-sm font-medium transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -350,14 +287,11 @@ export default function ClientSupportPage() {
               )}
 
               <div className="flex gap-2">
-                <button className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-sm font-medium transition-colors">
-                  View Conversation
-                </button>
-                {ticket.status !== 'resolved' && ticket.status !== 'closed' && (
-                  <button className="px-4 py-2 border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-md text-sm font-medium transition-colors">
-                    Add Reply
-                  </button>
-                )}
+                <SupportTicketDetailsDialog ticket={adaptTicketForDialog(ticket)} onAddComment={handleDialogAddComment}>
+                  <Button className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-sm font-medium transition-colors">
+                    View Conversation
+                  </Button>
+                </SupportTicketDetailsDialog>
               </div>
             </CardContent>
           </Card>

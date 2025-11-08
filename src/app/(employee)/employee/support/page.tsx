@@ -1,10 +1,13 @@
 'use client';
 
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { HelpCircle, MessageSquare, Clock, CheckCircle, AlertTriangle, Phone, Mail, FileText, User, Calendar, Star } from 'lucide-react';
+import AddSupportTicketDialog from '@/components/add-support-ticket-dialog';
+import SupportTicketDetailsDialog from '@/components/support-ticket-details-dialog';
 
 export default function EmployeeSupportPage() {
   const supportStats = [
@@ -42,7 +45,7 @@ export default function EmployeeSupportPage() {
     },
   ];
 
-  const openTickets = [
+  const openTicketsInitial = [
     {
       id: 1,
       title: 'Cannot access project dashboard',
@@ -93,7 +96,7 @@ export default function EmployeeSupportPage() {
     },
   ];
 
-  const recentUpdates = [
+  const recentUpdatesInitial = [
     {
       id: 1,
       ticket: 'Cannot access project dashboard',
@@ -238,6 +241,47 @@ export default function EmployeeSupportPage() {
     }
   };
 
+  // make the page stateful so buttons can be functional (mocked in-memory)
+  const [tickets, setTickets] = useState(openTicketsInitial);
+  const [recentUpdatesState, setRecentUpdatesState] = useState(recentUpdatesInitial);
+
+  const handleCreateTicket = (ticket: any) => {
+    setTickets((t) => [ticket, ...t]);
+    setRecentUpdatesState((u) => [
+      {
+        id: Date.now(),
+        ticket: ticket.title,
+        update: 'Ticket created',
+        author: ticket.assignedTo || 'Support Team',
+        timestamp: ticket.createdDate,
+        type: 'acknowledgment',
+      },
+      ...u,
+    ]);
+  };
+
+  const handleAddComment = (ticketId: number, comment: string) => {
+    setTickets((t) =>
+      t.map((tk) =>
+        tk.id === ticketId
+          ? { ...tk, responses: (tk.responses || 0) + 1, lastUpdate: new Date().toISOString() }
+          : tk
+      )
+    );
+    const ticket = tickets.find((x) => x.id === ticketId);
+    setRecentUpdatesState((u) => [
+      {
+        id: Date.now(),
+        ticket: ticket?.title || 'Ticket',
+        update: comment,
+        author: 'You',
+        timestamp: new Date().toISOString(),
+        type: 'progress',
+      },
+      ...u,
+    ]);
+  };
+
   return (
     <div className="space-y-6">
       <div className="bg-linear-to-r from-red-600 to-red-700 rounded-xl p-6 shadow-lg">
@@ -292,7 +336,7 @@ export default function EmployeeSupportPage() {
           </CardHeader>
           <CardContent className="pt-6">
             <div className="space-y-4">
-              {openTickets.map((ticket) => (
+              {tickets.map((ticket) => (
                 <div key={ticket.id} className="p-4 rounded-lg hover:bg-gray-50 transition-colors border">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center space-x-3">
@@ -321,10 +365,20 @@ export default function EmployeeSupportPage() {
                   <div className="flex justify-between items-center">
                     <span className="text-xs text-gray-500">Assigned to: {ticket.assignedTo}</span>
                     <div className="flex space-x-2">
-                      <Button variant="outline" size="sm" className="text-red-600 border-red-300 hover:bg-red-50">
-                        View Details
-                      </Button>
-                      <Button variant="outline" size="sm" className="text-red-600 border-red-300 hover:bg-red-50">
+                      <SupportTicketDetailsDialog ticket={ticket} onAddComment={handleAddComment}>
+                        <Button variant="outline" size="sm" className="text-red-600 border-red-300 hover:bg-red-50">
+                          View Details
+                        </Button>
+                      </SupportTicketDetailsDialog>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-red-600 border-red-300 hover:bg-red-50"
+                        onClick={() => {
+                          const comment = prompt('Add a comment (mock):');
+                          if (comment) handleAddComment(ticket.id, comment);
+                        }}
+                      >
                         Add Comment
                       </Button>
                     </div>
@@ -345,7 +399,7 @@ export default function EmployeeSupportPage() {
           </CardHeader>
           <CardContent className="pt-6">
             <div className="space-y-4">
-              {recentUpdates.map((update) => (
+              {recentUpdatesState.map((update) => (
                 <div key={update.id} className="flex items-center justify-between p-4 rounded-lg hover:bg-gray-50 transition-colors border">
                   <div className="flex-1">
                     <div className="flex items-center space-x-3">
@@ -365,9 +419,11 @@ export default function EmployeeSupportPage() {
                       </div>
                     </div>
                   </div>
-                  <Button variant="outline" size="sm" className="text-red-600 border-red-300 hover:bg-red-50">
-                    View Full Thread
-                  </Button>
+                  <SupportTicketDetailsDialog ticket={tickets.find((t) => t.title === update.ticket) || tickets[0]} onAddComment={handleAddComment}>
+                    <Button variant="outline" size="sm" className="text-red-600 border-red-300 hover:bg-red-50">
+                      View Full Thread
+                    </Button>
+                  </SupportTicketDetailsDialog>
                 </div>
               ))}
             </div>
@@ -407,7 +463,12 @@ export default function EmployeeSupportPage() {
                       </div>
                     </div>
                   </div>
-                  <Button variant="outline" size="sm" className="text-red-600 border-red-300 hover:bg-red-50">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-red-600 border-red-300 hover:bg-red-50"
+                    onClick={() => window.open(`/knowledge-base/${article.id}`, '_blank')}
+                  >
                     Read Article
                   </Button>
                 </div>
@@ -445,7 +506,18 @@ export default function EmployeeSupportPage() {
                           {method.availability} • {method.responseTime}
                         </p>
                       </div>
-                      <Button className="bg-red-600 hover:bg-red-700 text-white">
+                      <Button
+                        className="bg-red-600 hover:bg-red-700 text-white"
+                        onClick={() => {
+                          if (method.method === 'Email Support') {
+                            window.location.href = 'mailto:support@example.com?subject=Support%20Request';
+                          } else if (method.method === 'Phone Support') {
+                            window.location.href = 'tel:+18001234567';
+                          } else {
+                            alert('Open live chat (mock)');
+                          }
+                        }}
+                      >
                         Contact
                       </Button>
                     </div>
@@ -467,17 +539,19 @@ export default function EmployeeSupportPage() {
         </CardHeader>
         <CardContent className="pt-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Button className="p-5 border-2 border-red-200 rounded-xl hover:bg-linear-to-br hover:from-red-50 hover:to-purple-50 hover:border-red-300 text-left transition-all duration-200 group shadow-md hover:shadow-xl">
-              <div className="flex items-center space-x-3 mb-2">
-                <div className="p-2 bg-red-100 rounded-lg group-hover:bg-red-200 transition-colors">
-                  <HelpCircle className="h-5 w-5 text-red-600" />
+            <AddSupportTicketDialog onCreate={handleCreateTicket}>
+              <Button className="p-5 border-2 border-red-200 rounded-xl hover:bg-linear-to-br hover:from-red-50 hover:to-purple-50 hover:border-red-300 text-left transition-all duration-200 group shadow-md hover:shadow-xl">
+                <div className="flex items-center space-x-3 mb-2">
+                  <div className="p-2 bg-red-100 rounded-lg group-hover:bg-red-200 transition-colors">
+                    <HelpCircle className="h-5 w-5 text-red-600" />
+                  </div>
+                  <h3 className="font-bold text-gray-900 text-lg">Submit New Ticket</h3>
                 </div>
-                <h3 className="font-bold text-gray-900 text-lg">Submit New Ticket</h3>
-              </div>
-              <p className="text-sm text-gray-600 font-medium">
-                Create a new support request for any issue
-              </p>
-            </Button>
+                <p className="text-sm text-gray-600 font-medium">
+                  Create a new support request for any issue
+                </p>
+              </Button>
+            </AddSupportTicketDialog>
             <Button className="p-5 border-2 border-blue-200 rounded-xl hover:bg-linear-to-br hover:from-blue-50 hover:to-cyan-50 hover:border-blue-300 text-left transition-all duration-200 group shadow-md hover:shadow-xl">
               <div className="flex items-center space-x-3 mb-2">
                 <div className="p-2 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors">
