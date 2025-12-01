@@ -138,6 +138,9 @@ export interface Customer {
   projects: string[]; // Project IDs
   totalRevenue: number;
   
+  // Additional contact info
+  phoneNumbers?: { type: string; number: string }[];
+  
   createdAt: Date;
   updatedAt: Date;
 }
@@ -195,6 +198,8 @@ export interface Product {
   sku: string;
   name: string;
   description: string;
+  productType?: string;
+  orderSpecification?: string;
   mainCategoryId: string; // Reference to MainCategory
   subCategoryId: string; // Reference to SubCategory
   category: ProductCategory; // Legacy field, now represents the full path (e.g., "Electronics/Semiconductors")
@@ -205,6 +210,8 @@ export interface Product {
   costPrice: number;
   sellingPrice: number;
   margin: number;
+  marginPercentage?: number;
+  shippingCharges?: number;
 
   // Inventory
   currentStock: number;
@@ -225,9 +232,36 @@ export interface Product {
   // Vendor Info
   preferredVendor: string; // Vendor ID
   alternateVendors: string[];
+  supplierName?: string;
+
+  // Services
+  services?: ProductService[];
+  totalWithServices?: number;
 
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface Service {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  price: number;
+  duration?: number; // in hours
+  availability?: 'available' | 'limited' | 'unavailable';
+  status?: 'active' | 'inactive';
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ProductService {
+  serviceId: string;
+  serviceName: string;
+  quantity: number;
+  price: number;
+  total: number;
 }
 
 export interface InventoryTransaction {
@@ -408,6 +442,7 @@ export interface Vendor {
   
   // Categories
   productCategories: string[]; // Now array of strings for hierarchical categories
+  suppliedProducts?: string[]; // Array of product IDs
   
   status: VendorStatus;
   isActive: boolean;
@@ -713,7 +748,8 @@ export type QuotationStatus =
   | 'under_review'
   | 'approved'
   | 'rejected'
-  | 'expired';
+  | 'expired'
+  | 'converted';
 
 export interface Quotation {
   id: string;

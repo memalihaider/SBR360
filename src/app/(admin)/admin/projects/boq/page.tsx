@@ -451,8 +451,9 @@ export default function AdminBOQPage() {
   // Handle Duplicate BOQ
   const handleDuplicateBOQ = async (boq: BOQ) => {
     try {
+      const { id, ...boqWithoutId } = boq;
       const duplicatedBOQ = {
-        ...boq,
+        ...boqWithoutId,
         boqNumber: `BOQ-${new Date().getFullYear()}-${faker.string.numeric(3).padStart(3, '0')}`,
         status: 'draft',
         version: 1,
@@ -463,7 +464,6 @@ export default function AdminBOQPage() {
         updatedAt: serverTimestamp(),
       };
       
-      delete duplicatedBOQ.id;
       await addDoc(collection(db, 'boqs'), duplicatedBOQ);
       toast.success('BOQ duplicated successfully');
     } catch (error) {

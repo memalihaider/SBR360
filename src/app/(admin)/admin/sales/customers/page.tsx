@@ -1419,6 +1419,7 @@ function CustomerFormDialog({
         name: "",
         email: "",
         phone: "",
+        designation: "",
       },
       address: {
         street: "",
@@ -1454,6 +1455,7 @@ function CustomerFormDialog({
           name: "",
           email: "",
           phone: "",
+          designation: "",
         },
         address: {
           street: "",

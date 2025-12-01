@@ -1,4 +1,4 @@
-// 'use client';
+'use client';
 
 // import { useState, useRef, useEffect, useCallback } from 'react';
 // import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -207,22 +207,23 @@
 //   images: string[];
 // }
 
-// interface QuotationItem {
-//   id: string;
-//   itemId: string;
-//   productId: string;
-//   productName: string;
-//   description: string;
-//   quantity: number;
-//   rate: number;
-//   discount: number;
-//   discountType: 'percentage' | 'fixed';
-//   tax: number;
-//   taxType: 'percentage' | 'fixed';
-//   serviceCharges: number;
-//   amount: number;
-//   images: string[];
-// }
+interface QuotationItem {
+  id: string;
+  itemId: string;
+  productId: string;
+  productName: string;
+  description: string;
+  quantity: number;
+  rate: number;
+  discount: number;
+  discountType: 'percentage' | 'fixed';
+  tax: number;
+  taxType: 'percentage' | 'fixed';
+  serviceCharges: number;
+  amount: number;
+  images: string[];
+  titleId?: string;
+}
 
 // interface QuotationTitle {
 //   id: string;
@@ -4047,9 +4048,6 @@
 //   );
 // }
 
-// new code
-'use client';
-
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -5033,7 +5031,7 @@ const generatePDFWithImages = async (quotationData: any, sections: QuotationSect
   }
 
   // Add page numbers
-  const totalPages = pdf.internal.getNumberOfPages();
+  const totalPages = pdf.getNumberOfPages();
   for (let i = 1; i <= totalPages; i++) {
     pdf.setPage(i);
     pdf.setFontSize(8);
@@ -6263,7 +6261,7 @@ const addQuotationItem = (titleId: string) => {
                   variant="ghost"
                   size="sm"
                   onClick={() => {
-                    const newBenefits = section.data.keyBenefits.filter((_, i) => i !== index);
+                    const newBenefits = section.data.keyBenefits.filter((benefit: string, i: number) => i !== index);
                     updateSectionData(section.id, { keyBenefits: newBenefits });
                   }}
                   className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
@@ -6431,7 +6429,7 @@ const addQuotationItem = (titleId: string) => {
                   variant="ghost"
                   size="sm"
                   onClick={() => {
-                    const newAchievements = section.data.achievements.filter((_, i) => i !== index);
+                    const newAchievements = section.data.achievements.filter((achievement: string, i: number) => i !== index);
                     updateSectionData(section.id, { achievements: newAchievements });
                   }}
                   className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
@@ -6501,7 +6499,7 @@ const addQuotationItem = (titleId: string) => {
                   variant="ghost"
                   size="sm"
                   onClick={() => {
-                    const newChallenges = section.data.clientChallenges.filter((_, i) => i !== index);
+                    const newChallenges = section.data.clientChallenges.filter((challenge: string, i: number) => i !== index);
                     updateSectionData(section.id, { clientChallenges: newChallenges });
                   }}
                   className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
@@ -6587,7 +6585,7 @@ const addQuotationItem = (titleId: string) => {
                   variant="ghost"
                   size="sm"
                   onClick={() => {
-                    const newObjectives = section.data.objectives.filter((_, i) => i !== index);
+                    const newObjectives = section.data.objectives.filter((objective: string, i: number) => i !== index);
                     updateSectionData(section.id, { objectives: newObjectives });
                   }}
                   className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
@@ -6687,7 +6685,7 @@ const addQuotationItem = (titleId: string) => {
                   variant="ghost"
                   size="sm"
                   onClick={() => {
-                    const newFeatures = section.data.keyFeatures.filter((_, i) => i !== index);
+                    const newFeatures = section.data.keyFeatures.filter((feature: string, i: number) => i !== index);
                     updateSectionData(section.id, { keyFeatures: newFeatures });
                   }}
                   className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
@@ -6764,7 +6762,7 @@ const addQuotationItem = (titleId: string) => {
                   variant="ghost"
                   size="sm"
                   onClick={() => {
-                    const newBenefits = section.data.benefits.filter((_, i) => i !== index);
+                    const newBenefits = section.data.benefits.filter((benefit: string, i: number) => i !== index);
                     updateSectionData(section.id, { benefits: newBenefits });
                   }}
                   className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
@@ -7837,7 +7835,7 @@ const addQuotationItem = (titleId: string) => {
                   variant="ghost"
                   size="sm"
                   onClick={() => {
-                    const newSteps = section.data.nextSteps.filter((_, i) => i !== index);
+                    const newSteps = section.data.nextSteps.filter((step: string, i: number) => i !== index);
                     updateSectionData(section.id, { nextSteps: newSteps });
                   }}
                   className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"

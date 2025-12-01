@@ -943,6 +943,7 @@ import { useRouter } from 'next/navigation';
 // Firebase imports
 import { db } from '@/lib/firebase';
 import { collection, addDoc, getDocs, updateDoc, deleteDoc, doc, query, orderBy, where } from 'firebase/firestore';
+import { QuotationStatus } from '@/types';
 
 interface Quotation {
   id: string;
@@ -1315,7 +1316,7 @@ export default function AdminSalesQuotationsPage() {
       });
       
       const updatedQuotations = quotations.map(q => 
-        q.id === quotation.id ? { ...q, status: 'converted', updatedAt: new Date().toISOString() } : q
+        q.id === quotation.id ? { ...q, status: 'converted' as QuotationStatus, updatedAt: new Date().toISOString() } : q
       );
       setQuotations(updatedQuotations);
       alert(`Quotation ${quotation.quotationNumber} converted to invoice successfully!`);
@@ -1370,7 +1371,7 @@ export default function AdminSalesQuotationsPage() {
       });
       
       const updatedQuotations = quotations.map(q => 
-        q.id === quotation.id ? { ...q, status: 'sent', updatedAt: new Date().toISOString() } : q
+        q.id === quotation.id ? { ...q, status: 'sent' as QuotationStatus, updatedAt: new Date().toISOString() } : q
       );
       setQuotations(updatedQuotations);
       alert(`Quotation ${quotation.quotationNumber} sent successfully!`);

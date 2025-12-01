@@ -286,7 +286,8 @@ export default function ProjectTasksPage() {
     };
 
     try {
-      await updateDoc(doc(db, 'tasks', selectedTask.id), updatedTask);
+      const { id, ...updateData } = updatedTask;
+      await updateDoc(doc(db, 'tasks', selectedTask.id), updateData);
       setTasks(prev => prev.map(task => 
         task.id === selectedTask.id ? { ...updatedTask, id: selectedTask.id } : task
       ));

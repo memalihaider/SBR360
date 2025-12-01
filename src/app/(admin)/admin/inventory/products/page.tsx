@@ -1834,6 +1834,12 @@ export default function AdminInventoryProductsPage() {
         reorderPoint: productForm.reorderPoint || 20,
         status: productForm.status || 'active',
         margin: 0,
+        specifications: {},
+        images: [],
+        isSerialTracked: false,
+        isBatchTracked: false,
+        preferredVendor: '',
+        alternateVendors: [],
         services: selectedServices, // ✅ Include selected services
         totalWithServices: calculateFormTotalWithServices(), // ✅ Calculate total with services
         createdAt: new Date(),

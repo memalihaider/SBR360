@@ -308,6 +308,7 @@ export default function EmployeesPage() {
         manager: newEmployee.manager,
         skills: newEmployee.skills ?? [],
         emergencyContact: { name: '', relationship: '', phone: '' },
+        status: 'active',
       });
       setNewEmployee({
         name: '',

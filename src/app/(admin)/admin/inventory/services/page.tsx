@@ -60,9 +60,10 @@ export default function AdminServicesPage() {
   const [serviceForm, setServiceForm] = useState<Partial<Service>>({
     name: '',
     description: '',
+    category: '',
     price: 0,
     availability: 'available',
-    status: 'active',
+    isActive: true,
   });
 
   const itemsPerPage = 10;
@@ -203,7 +204,7 @@ export default function AdminServicesPage() {
     };
   }, [services, currency]);
 
-  const getStatusBadge = (status: ServiceStatus | undefined) => {
+  const getStatusBadge = (status: 'active' | 'inactive' | undefined) => {
     if (!status || status === 'active') {
       return { variant: 'default' as const, label: 'ACTIVE', color: 'green' };
     }
@@ -216,7 +217,7 @@ export default function AdminServicesPage() {
         return { label: 'Available', color: 'green' };
       case 'limited':
         return { label: 'Limited', color: 'yellow' };
-      case 'not_available':
+      case 'unavailable':
         return { label: 'Not Available', color: 'red' };
       default:
         return { label: 'Unknown', color: 'gray' };
@@ -286,9 +287,11 @@ export default function AdminServicesPage() {
       const serviceData = {
         name: serviceName,
         description: serviceForm.description || '',
+        category: serviceForm.category || 'General',
         price: servicePrice,
         availability: serviceForm.availability || 'available',
         status: serviceForm.status || 'active',
+        isActive: serviceForm.isActive ?? true,
         createdAt: new Date(),
         updatedAt: new Date()
       };
@@ -874,7 +877,7 @@ export default function AdminServicesPage() {
                 <select
                   id="status"
                   value={serviceForm.status || 'active'}
-                  onChange={(e) => setServiceForm({ ...serviceForm, status: e.target.value as ServiceStatus })}
+                  onChange={(e) => setServiceForm({ ...serviceForm, status: e.target.value as 'active' | 'inactive' })}
                   className="w-full border border-gray-300 rounded px-3 py-2"
                 >
                   <option value="active">Active</option>
